@@ -1,0 +1,63 @@
+<section class="hero">
+  <div class="hero__in">
+    <p class="eyebrow">Kimana and Oloitokitok</p>
+    <h1>Rides and parcels, dispatched in seconds.</h1>
+    <p class="lead">On-demand boda bodas and instant Quickshelf deliveries.</p>
+    <div class="row wrap">
+      <a class="btn btn--dark btn--lg" href="#/auth?mode=register&role=passenger&next=/book">Book a ride</a>
+      <a class="btn btn--light btn--lg" href="#/auth?mode=register&role=rider">Ride with us</a>
+    </div>
+  </div>
+</section>
+
+<section class="page widget-wrap">
+  <div class="card widget" id="w">
+    <div class="seg" role="group" aria-label="What do you need?">
+      <button data-k="ride" aria-pressed="true">Book a ride</button>
+      <button data-k="parcel" aria-pressed="false">Send a parcel</button>
+    </div>
+    <div class="stack" id="wRide">
+      <div class="field"><label for="wStage">Pickup stage</label><select class="select" id="wStage"></select></div>
+      <div class="field"><label for="wDest">Where to?</label><input class="input" id="wDest" placeholder="Junction Stage" autocomplete="off"></div>
+      <div class="suggest"><span>Riders bid on your trip<br><small class="muted">Suggested fare</small></span><strong class="money" id="wFare">KSh 150</strong></div>
+      <button class="btn btn--green btn--lg btn--block" id="wGo">Find available riders</button>
+    </div>
+    <div class="stack" id="wParcel" hidden>
+      <div class="field"><label for="wStore">Store or merchant</label><input class="input" id="wStore" placeholder="Maggie's Collection" autocomplete="off"></div>
+      <div class="field"><label for="wDrop">Dropoff stage</label><input class="input" id="wDrop" placeholder="Stage 2, near Shell" autocomplete="off"></div>
+      <div class="chips" id="wWeights" role="group" aria-label="Package size"></div>
+      <button class="btn btn--amber btn--lg btn--block" id="wGo2">Dispatch rider for pickup</button>
+    </div>
+  </div>
+</section>
+
+<section class="page stack-lg">
+  <div class="rv"><h2>Name your price, or send it flat</h2><p class="muted" style="margin-top:8px">Passengers get bids from riders nearby. Parcels have one fixed fee, and the first rider to accept takes the job.</p></div>
+  <ol class="steps rv">
+    <li class="done">Tell us where you are going, or what you are sending.</li>
+    <li class="done">Riders at your stage respond in seconds with their price.</li>
+    <li class="done">Your rider arrives. Pay cash on a ride, share the code on a parcel.</li>
+  </ol>
+  <div class="card card--flat rv">
+    <h3>Quickshelf flat fees</h3>
+    <div id="landFees" style="margin-top:6px"></div>
+  </div>
+</section>
+
+<section class="page stack-lg">
+  <div class="card card--green rv">
+    <h3>Every rider is identified</h3>
+    <p style="margin-top:6px">Riders sign up with their national ID, a selfie and a photo of the bike and plate. A person at BodaLink checks them before they can take a single job. Passengers verify their phone number, so every trip has a name and a number behind it.</p>
+  </div>
+  <div class="card rv" style="background:var(--ink);color:var(--bg);border:0">
+    <h2>Ride with BodaLink</h2>
+    <p style="margin:10px 0 18px;opacity:.85">Set your own fare on rides. Parcels pay a fixed rate and you keep 85%. No app store, it installs from the browser.</p>
+    <a class="btn btn--green btn--lg" href="#/auth?mode=register&role=rider">Join as a rider</a>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="logo"><svg class="mk" viewBox="5 5 58 54" aria-hidden="true"><use href="#mark"/></svg>BodaLink</div>
+  <p class="small muted">Powered by Quickshelf. Built by Flynn Technologies.</p>
+  <button class="small muted" id="srv" style="text-decoration:underline">Server settings</button>
+</footer>

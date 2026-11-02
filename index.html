@@ -1,73 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Safari Boda — Ride to Amboseli with someone who knows the road</title>
-<meta name="description" content="Book a guided boda boda tour from Kimana toward Amboseli. Vetted riders, clear pricing, wildlife viewing on every package.">
-
-<!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-
-<!-- Styles -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#34D186">
+<meta name="description" content="BodaLink: on-demand boda rides and instant Quickshelf parcel deliveries in Kimana and Oloitokitok.">
+<title>BodaLink</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/components.css">
-<link rel="stylesheet" href="css/views/public.css">
-<link rel="stylesheet" href="css/views/rider.css">
-<link rel="stylesheet" href="css/views/admin.css">
+<link rel="stylesheet" href="css/screens.css">
 </head>
-<body>
+<body class="public">
+<!-- Logo: a b made of a frame and a wheel, in front of a chain link. b is for Boda, the link is the Link. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <mask id="ml" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><circle cx="30" cy="40" r="11" fill="none" stroke="#000" stroke-width="12"/><rect x="8" y="8" width="10" height="48" rx="5" fill="#000"/></mask>
+  <g id="mg">
+    <rect x="38" y="9" width="20" height="46" rx="10" stroke-width="6" mask="url(#ml)" style="fill:none;stroke:var(--c2)"/>
+    <rect x="8" y="8" width="10" height="48" rx="5" style="fill:var(--c1)"/>
+    <circle cx="30" cy="40" r="11" stroke-width="7" style="fill:none;stroke:var(--c1)"/>
+  </g>
+  <symbol id="mark" viewBox="5 5 58 54"><use href="#mg"/></symbol>
+</defs></svg>
 
-<div id="app">
-  <!-- Router renders the current view into here -->
+<div class="app" id="app">
+  <header class="topbar" id="topbar">
+    <a class="logo" href="#/" aria-label="BodaLink home"><svg class="mk" viewBox="5 5 58 54" aria-hidden="true"><use href="#mark"/></svg>BodaLink</a>
+    <nav class="navlinks" id="navlinks" aria-label="Site">
+      <a href="#/auth?mode=register&role=passenger&next=/book">Book a ride</a>
+      <a href="#/auth?mode=register&role=passenger&next=/book&kind=parcel">Quickshelf delivery</a>
+      <a href="#/auth?mode=register&role=rider">Ride with us</a>
+    </nav>
+    <div class="row" id="topright"></div>
+  </header>
+  <main id="views"></main>
+  <nav class="tabbar" id="tabbar" aria-label="Main" hidden></nav>
 </div>
+<div id="toasts" aria-live="polite"></div>
+<div id="sheet-root"></div>
 
-<!-- ============================================
-     SCRIPT LOAD ORDER MATTERS.
-     No ES modules (file:// breaks import/export),
-     so every file attaches to the global `SafariBoda`
-     namespace object. Load order = dependency order:
-     core/utils first, then components, then views,
-     then the router + app bootstrap last.
-     ============================================ -->
-
-<!-- Supabase client library (CDN, exposes global `supabase` factory) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-<!-- Core -->
-<script src="js/supabase-client.js"></script>
-<script src="js/auth.js"></script>
-
-<!-- Utils -->
-<script src="js/utils/format.js"></script>
-<script src="js/utils/currency.js"></script>
-
-<!-- Shared components -->
-<script src="js/components/navbar.js"></script>
-
-<!-- Public views -->
-<script src="js/views/public/home.js"></script>
-<script src="js/views/public/auth.js"></script>
-<script src="js/views/public/request.js"></script>
-<script src="js/views/public/my-orders.js"></script>
-
-<!-- Rider views -->
-<script src="js/views/rider/register.js"></script>
-<script src="js/views/rider/complete-profile.js"></script>
-<script src="js/views/rider/dashboard.js"></script>
-<script src="js/views/rider/bookings.js"></script>
-
-<!-- Admin views -->
-<script src="js/views/admin/dashboard.js"></script>
-<script src="js/views/admin/riders.js"></script>
-<script src="js/views/admin/orders.js"></script>
-<script src="js/views/admin/vendors.js"></script>
-
-<!-- Router + bootstrap (must load last) -->
+<script src="js/server.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/push.js"></script>
 <script src="js/router.js"></script>
+<script src="js/landing.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/passenger.js"></script>
+<script src="js/me.js"></script>
+<script src="js/rider.js"></script>
+<script src="js/admin.js"></script>
 <script src="js/app.js"></script>
-
 </body>
 </html>

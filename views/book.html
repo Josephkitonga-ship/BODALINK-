@@ -1,0 +1,28 @@
+<div class="page stack-lg">
+  <div><p class="muted" id="bHello"></p><h2>Where to?</h2></div>
+  <div class="card card--green" id="bNudge" hidden>
+    <b>Add your ID for a verified badge</b>
+    <p class="small" style="margin:4px 0 10px">Riders trust verified passengers, and it helps if anything goes wrong on a trip.</p>
+    <a class="btn btn--dark btn--sm" href="#/me">Verify now</a>
+  </div>
+  <div class="card stack">
+    <div class="seg" id="bTabs" role="group" aria-label="What do you need?">
+      <button data-k="ride" aria-pressed="true">Book a ride</button>
+      <button data-k="parcel" aria-pressed="false">Send a parcel</button>
+    </div>
+    <form class="stack" id="bRide" novalidate>
+      <div class="field"><label for="bStage">Pickup stage</label><select class="select" id="bStage"></select></div>
+      <div class="field"><label for="bDest">Where to?</label><input class="input" id="bDest" placeholder="Junction Stage" autocomplete="off"></div>
+      <div class="suggest"><span>Riders bid on your trip<br><small class="muted">Suggested fare</small></span><strong class="money" id="bFare">KSh 150</strong></div>
+      <div class="field"><label for="bMax">Most I will pay (optional)</label><input class="input" id="bMax" inputmode="numeric" placeholder="KSh 150"></div>
+      <div class="row between"><span id="bAutoL">Take the first bid at or under my price</span><button type="button" class="switch" id="bAuto" role="switch" aria-checked="false" aria-labelledby="bAutoL"></button></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Request bids</button>
+    </form>
+    <form class="stack" id="bParcel" hidden novalidate>
+      <div class="field"><label for="bStore">Store or merchant</label><input class="input" id="bStore" placeholder="Maggie's Collection" autocomplete="off"></div>
+      <div class="field"><label for="bDrop">Dropoff stage</label><input class="input" id="bDrop" placeholder="Stage 2, near Shell" autocomplete="off"></div>
+      <div class="chips" id="bWeights" role="group" aria-label="Package size"></div>
+      <button class="btn btn--amber btn--lg btn--block" type="submit" id="bGo2">Dispatch rider for pickup</button>
+    </form>
+  </div>
+</div>

@@ -1,122 +1,93 @@
-/* ============================================
-   SAFARI BODA — AUTH
-   Handles login/logout and keeps SafariBoda.state
-   in sync with the current Supabase session + role.
-   Role comes from a `profiles` table row keyed to
-   the Supabase Auth user (schema TBD — for now this
-   assumes a `profiles` table with a `role` column:
-   'client' | 'rider' | 'admin').
-   ============================================ */
+/* Sign in, create account (passenger or rider) and PIN reset. Phone number is the login. */
+(function () {
+  const BL = (window.BL = window.BL || {});
+  const st = { mode: "login", role: "", step: 1, next: "", kind: "" };
 
-SafariBoda.auth = {
+  BL.views.auth = {
+    mount(sec) {
+      const $ = (s) => BL.$(s, sec);
+      const forms = { login: $("#fLogin"), register: $("#fReg"), reset: $("#fReset") };
+      const showForm = (m) => {
+        st.mode = m;
+        Object.keys(forms).forEach((k) => (forms[k].hidden = k !== m));
+        BL.$$("#aTabs [data-m]", sec).forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === m));
+        $("#aTabs").hidden = m === "reset";
+      };
+      const step = (n) => {
+        st.step = n;
+        BL.$$("[data-step]", forms.register).forEach((d) => (d.hidden = +d.dataset.step !== n));
+        $("#rRider").hidden = st.role !== "rider";
+        $("#rPass").hidden = st.role !== "passenger";
+      };
+      const done = (isNew) => {
+        BL.toast(isNew ? "Welcome to BodaLink." : "Signed in.", "ok");
+        const next = st.next && st.next !== "/auth" ? "#" + st.next : null;
+        location.hash = BL.api.role === "rider" && isNew ? "#/join" : next || BL.home();
+      };
+      const pinOk = (p) => /^\d{6}$/.test(p);
+      const devFill = (r, input, hint) => { if (r.dev_code) { input.value = r.dev_code; hint.textContent = "Test mode: your code was filled in for you."; } };
 
-  /**
-   * Call once on app boot. Restores any existing session,
-   * loads the role, and subscribes to future auth changes.
-   */
-  async init() {
-    const { data: { session } } = await SafariBoda.supabase.auth.getSession();
-    await this._applySession(session);
+      BL.fillStages($("#rStage"), true);
+      BL.$$("#aTabs [data-m]", sec).forEach((b) => (b.onclick = () => { showForm(b.dataset.m); if (b.dataset.m === "register") step(st.role ? 2 : 1); }));
+      $("#toReset").onclick = () => showForm("reset");
+      $("#toLogin").onclick = () => showForm("login");
+      BL.$$("[data-back]", sec).forEach((b) => (b.onclick = () => step(Math.max(1, st.step - 1))));
+      BL.$$(".role", sec).forEach((b) => (b.onclick = () => { st.role = b.dataset.role; step(2); }));
 
-    SafariBoda.supabase.auth.onAuthStateChange(async (_event, session) => {
-      await this._applySession(session);
-      SafariBoda.router.rerender();
-    });
-  },
+      forms.login.onsubmit = (e) => {
+        e.preventDefault();
+        if (!pinOk($("#lPin").value)) return BL.toast("Your PIN is 6 digits.", "err");
+        BL.busy(e.submitter, async () => { await BL.api.login($("#lPhone").value, $("#lPin").value); done(false); });
+      };
 
-  async _applySession(session) {
-    if (!session) {
-      SafariBoda.state.user = null;
-      SafariBoda.state.profile = null;
-      SafariBoda.state.role = 'guest';
-      return;
-    }
+      forms.register.onsubmit = (e) => {
+        e.preventDefault();
+        if (st.step === 2) {
+          if ($("#rName").value.trim().length < 2) return BL.toast("Enter your full name.", "err");
+          if (!BL.normPhone($("#rPhone").value)) return BL.toast("Enter a valid phone number.", "err");
+          if (st.role === "rider") {
+            if (!/^\d{6,10}$/.test($("#rNid").value.trim())) return BL.toast("Enter your national ID number.", "err");
+            if ($("#rPlate").value.trim().length < 5) return BL.toast("Enter your motorbike registration.", "err");
+            if (!$("#rStage").value) return BL.toast("Pick your home stage.", "err");
+          }
+          BL.busy(e.submitter, async () => {
+            const r = await BL.api.otp($("#rPhone").value, "register");
+            $("#rSent").textContent = "We sent a code to " + $("#rPhone").value + ".";
+            devFill(r, $("#rCode"), $("#rSent"));
+            step(3);
+          });
+        } else if (st.step === 3) {
+          if (!pinOk($("#rPin").value)) return BL.toast("Your PIN must be 6 digits.", "err");
+          if ($("#rPin").value !== $("#rPin2").value) return BL.toast("The two PINs do not match.", "err");
+          BL.busy(e.submitter, async () => {
+            await BL.api.register({
+              role: st.role, name: $("#rName").value.trim(), phone: $("#rPhone").value, otp: $("#rCode").value.trim(), pin: $("#rPin").value,
+              national_id: $("#rNid").value.trim(), plate: $("#rPlate").value.trim(), home_stage: $("#rStage").value,
+              emergency_name: $("#rEName").value.trim(), emergency_phone: $("#rEPhone").value,
+            });
+            done(true);
+          });
+        }
+      };
 
-    SafariBoda.state.user = session.user;
-
-    const { data: profile, error } = await SafariBoda.supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
-    if (error) {
-      console.error('Failed to load profile for signed-in user:', error);
-      SafariBoda.state.profile = null;
-      SafariBoda.state.role = 'client'; // safe fallback — least privilege
-      return;
-    }
-
-    SafariBoda.state.profile = profile;
-    SafariBoda.state.role = profile.role; // 'client' | 'rider' | 'admin'
-  },
-
-  async signInWithPassword(email, password) {
-    const { data, error } = await SafariBoda.supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  },
-
-  /**
-   * Self-registration for both clients and riders — everyone signs up
-   * the same way. role starts as 'client'; becoming a rider is a
-   * separate step (registerAsRider) after signing in.
-   */
-  async signUpWithPassword(email, password, fullName, phone) {
-    const { data, error } = await SafariBoda.supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, phone: phone }
-      }
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  /**
-   * Turns the current signed-in user into a rider. Inserts their
-   * rider record; a database trigger flips profiles.role to 'rider'
-   * automatically. Must be signed in first.
-   */
-  async registerAsRider({ fullName, phone, nationalId, licenseNumber, bikePlate, serviceArea }) {
-    if (!this.isSignedIn()) throw new Error('Must be signed in to register as a rider');
-
-    const { data, error } = await SafariBoda.supabase
-      .from('riders')
-      .insert({
-        profile_id: SafariBoda.state.user.id,
-        full_name: fullName,
-        phone,
-        national_id: nationalId,
-        license_number: licenseNumber,
-        bike_plate: bikePlate,
-        service_area: serviceArea || 'Kimana'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Refresh local role/profile state so the UI updates immediately
-    await this._applySession((await SafariBoda.supabase.auth.getSession()).data.session);
-    return data;
-  },
-
-  async signOut() {
-    await SafariBoda.supabase.auth.signOut();
-    window.location.hash = '#/';
-  },
-
-  isSignedIn() {
-    return !!SafariBoda.state.user;
-  },
-
-  isRider() {
-    return SafariBoda.state.role === 'rider';
-  },
-
-  isAdmin() {
-    return SafariBoda.state.role === 'admin';
-  }
-};
+      $("#pSend").onclick = (e) => BL.busy(e.currentTarget, async () => {
+        const r = await BL.api.otp($("#pPhone").value, "reset");
+        BL.toast("Code sent.", "ok");
+        devFill(r, $("#pCode"), document.createElement("p"));
+      });
+      forms.reset.onsubmit = (e) => {
+        e.preventDefault();
+        if (!pinOk($("#pPin").value)) return BL.toast("Your new PIN must be 6 digits.", "err");
+        BL.busy(e.submitter, async () => { await BL.api.reset({ phone: $("#pPhone").value, otp: $("#pCode").value.trim(), pin: $("#pPin").value }); done(false); });
+      };
+      sec._show = (m) => { showForm(m); if (m === "register") step(st.role ? 2 : 1); };
+    },
+    show(sec, p) {
+      if (BL.api.authed) { location.hash = BL.home(); return; }
+      st.next = p.next || ""; st.kind = p.kind || "";
+      if (p.role === "passenger" || p.role === "rider") st.role = p.role;
+      if (st.kind === "parcel") localStorage.setItem("bl.draft", JSON.stringify({ kind: "parcel" }));
+      sec._show(p.mode === "register" ? "register" : "login");
+    },
+  };
+})();

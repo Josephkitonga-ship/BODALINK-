@@ -1,110 +1,88 @@
-/* ============================================
-   SAFARI BODA — ROUTER
-   Hash-based (works on GitHub Pages / file:// with
-   no server rewrite rules needed). Guards admin/
-   rider routes client-side for UX only — the real
-   security boundary is Supabase row-level security,
-   not this file. See Tech Stack Report §5.
-   ============================================ */
+/* Hash router with view panes. Views load their HTML on first visit. */
+(function () {
+  const BL = (window.BL = window.BL || {});
+  BL.views = BL.views || {};
+  const R = {
+    "/": { v: "landing", pub: true }, "/auth": { v: "auth", pub: true },
+    "/book": { v: "book", roles: ["passenger"] }, "/trip": { v: "trip", roles: ["passenger"] },
+    "/me": { v: "me", roles: ["passenger", "rider", "admin"] },
+    "/rider": { v: "rider", roles: ["rider"] }, "/float": { v: "float", roles: ["rider"] }, "/join": { v: "join", roles: ["rider"] },
+    "/admin": { v: "admin", roles: ["admin"] },
+  };
+  const HOME = { passenger: "#/book", rider: "#/rider", admin: "#/admin" };
+  const TABS = {
+    passenger: [["#/book", "Book", "book"], ["#/trip", "Trips", "trips"], ["#/me", "Account", "me"]],
+    rider: [["#/rider", "Jobs", "jobs"], ["#/float", "Float", "float"], ["#/me", "Account", "me"]],
+    admin: [["#/admin", "Dashboard", "admin"], ["#/me", "Account", "me"]],
+  };
+  BL.home = () => HOME[BL.api.role] || "#/";
 
-SafariBoda.router = {
+  const parse = () => {
+    const h = location.hash.slice(1) || "/";
+    const [path, q] = h.split("?");
+    return { path: path === "" ? "/" : path, params: Object.fromEntries(new URLSearchParams(q || "")) };
+  };
 
-  routes: [
-    { pattern: '#/',                 handler: () => SafariBoda.views.public.home() },
-    { pattern: '#/signin',           handler: () => SafariBoda.views.public.auth({}, 'signin') },
-    { pattern: '#/signup',           handler: () => SafariBoda.views.public.auth({}, 'signup') },
-    { pattern: '#/request',          handler: () => SafariBoda.views.public.request() },
-    { pattern: '#/my-orders',        handler: () => SafariBoda.views.public.myOrders(), guard: 'signedIn' },
-    { pattern: '#/become-a-rider',   handler: () => SafariBoda.views.rider.register(), guard: 'signedIn' },
-
-    { pattern: '#/rider',            handler: () => SafariBoda.views.rider.dashboard(), guard: 'rider' },
-    { pattern: '#/rider/orders',     handler: () => SafariBoda.views.rider.bookings(),  guard: 'rider' },
-    { pattern: '#/rider/profile',    handler: () => SafariBoda.views.rider.completeProfile(), guard: 'rider' },
-
-    { pattern: '#/admin',            handler: () => SafariBoda.views.admin.dashboard(), guard: 'admin' },
-    { pattern: '#/admin/riders',     handler: () => SafariBoda.views.admin.riders(),    guard: 'admin' },
-    { pattern: '#/admin/orders',     handler: () => SafariBoda.views.admin.bookings(),  guard: 'admin' },
-    { pattern: '#/admin/vendors',    handler: () => SafariBoda.views.admin.vendors(),   guard: 'admin' },
-  ],
-
-  /** Matches a hash like "#/book/123" against a pattern like "#/book/:packageId" */
-  _match(hash, pattern) {
-    const hashParts = hash.split('/');
-    const patternParts = pattern.split('/');
-    if (hashParts.length !== patternParts.length) return null;
-
-    const params = {};
-    for (let i = 0; i < patternParts.length; i++) {
-      const p = patternParts[i];
-      if (p.startsWith(':')) {
-        params[p.slice(1)] = decodeURIComponent(hashParts[i]);
-      } else if (p !== hashParts[i]) {
-        return null;
-      }
-    }
-    return params;
-  },
-
-  _guardPasses(guard) {
-    if (!guard) return true;
-    if (guard === 'signedIn') return SafariBoda.auth.isSignedIn();
-    if (guard === 'rider') return SafariBoda.auth.isRider() || SafariBoda.auth.isAdmin();
-    if (guard === 'admin') return SafariBoda.auth.isAdmin();
-    return true;
-  },
-
-  resolve() {
-    const hash = window.location.hash || '#/';
-
-    for (const route of this.routes) {
-      const params = this._match(hash, route.pattern);
-      if (params === null) continue;
-
-      if (!this._guardPasses(route.guard)) {
-        this._renderForbidden(route.guard);
-        return;
-      }
-
-      SafariBoda.components.navbar.render();
-      route.handler(params);
-      return;
-    }
-
-    this._renderNotFound();
-  },
-
-  /** Re-runs the current route — used after auth state changes */
-  rerender() {
-    this.resolve();
-  },
-
-  navigate(hash) {
-    window.location.hash = hash;
-  },
-
-  _renderForbidden(requiredRole) {
-    const message = requiredRole === 'admin' ? 'Safari Boda admins'
-      : requiredRole === 'rider' ? 'riders'
-      : 'signed-in users';
-    document.getElementById('app').innerHTML = `
-      <div class="container" style="padding-top: var(--space-24); text-align: center;">
-        <h1>You don't have access to this page</h1>
-        <p style="color: var(--sage-bush); margin-top: var(--space-4);">
-          This area is for ${message} only.
-        </p>
-        <a href="#/signin" class="btn btn-primary" style="margin-top: var(--space-6);">Sign in</a>
-      </div>
-    `;
-  },
-
-  _renderNotFound() {
-    document.getElementById('app').innerHTML = `
-      <div class="container" style="padding-top: var(--space-24); text-align: center;">
-        <h1>Page not found</h1>
-        <a href="#/" class="btn btn-primary" style="margin-top: var(--space-6);">Back to home</a>
-      </div>
-    `;
+  let current = null;
+  async function load(name) {
+    let sec = BL.$("#view-" + name);
+    if (sec) return sec;
+    sec = document.createElement("section");
+    sec.id = "view-" + name;
+    sec.className = "view";
+    BL.$("#views").appendChild(sec);
+    try {
+      const res = await fetch("views/" + name + ".html");
+      sec.innerHTML = await res.text();
+    } catch (_) { sec.innerHTML = '<div class="empty">This page needs a connection the first time you open it.</div>'; }
+    const v = BL.views[name];
+    if (v && v.mount) v.mount(sec);
+    return sec;
   }
-};
 
-window.addEventListener('hashchange', () => SafariBoda.router.resolve());
+  async function go() {
+    const { path, params } = parse();
+    const r = R[path];
+    if (!r) { location.hash = "#/"; return; }
+    if (!r.pub && !BL.api.authed) { location.hash = "#/auth?next=" + encodeURIComponent(path); return; }
+    if (r.roles && r.roles.indexOf(BL.api.role) < 0) { location.hash = BL.home(); return; }
+    const token = (current = {});
+    const sec = await load(r.v);
+    if (token !== current) return;
+    BL.$$(".view").forEach((s) => {
+      const on = s === sec;
+      if (s.classList.contains("on") && !on && BL.views[s.id.slice(5)] && BL.views[s.id.slice(5)].hide) BL.views[s.id.slice(5)].hide(s);
+      s.classList.toggle("on", on);
+    });
+    chrome(path, r);
+    const v = BL.views[r.v];
+    if (v && v.show) v.show(sec, params);
+    BL.reveal(sec);
+    window.scrollTo(0, 0);
+    document.title = (r.v === "landing" ? "BodaLink" : r.v[0].toUpperCase() + r.v.slice(1) + " | BodaLink");
+  }
+
+  function chrome(path, r) {
+    const authed = BL.api.authed;
+    const landing = r.v === "landing" && !authed;
+    document.body.classList.toggle("public", !authed || r.v === "landing" || r.v === "auth");
+    BL.$("#topbar").classList.toggle("on-hero", landing);
+    BL.$("#navlinks").hidden = authed;
+    const tb = BL.$("#tabbar");
+    const tabs = authed && r.v !== "landing" ? TABS[BL.api.role] || [] : [];
+    tb.hidden = !tabs.length;
+    BL.html(tb, BL.h`${tabs.map(([href, label, ico]) => BL.h`<a href="${href}" ${href === "#/" + path.slice(1) ? BL.raw('aria-current="page"') : ""}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">${BL.raw(BL.ico(ico))}</svg>${label}</a>`)}`);
+    const tr = BL.$("#topright");
+    if (!authed) {
+      BL.html(tr, BL.h`<a class="btn btn--dark btn--sm" href="#/auth?mode=login">Sign in</a>`);
+    } else {
+      BL.html(tr, BL.h`<button class="btn btn--soft btn--sm" id="bell" aria-label="Notifications" style="position:relative;padding:0 12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${BL.raw(BL.ico("bell"))}</svg><span class="dot-n" id="bellN" hidden></span></button>
+        <a class="avatar" style="width:38px;height:38px;font-size:14px;text-decoration:none" href="#/me" aria-label="My account">${BL.initials(BL.api.me.name)}</a>`);
+      BL.$("#bell").onclick = () => BL.notifications.open();
+      BL.notifications.paint();
+    }
+  }
+
+  BL.router = { start() { window.addEventListener("hashchange", go); go(); }, go, parse, chrome: () => { const { path } = parse(); chrome(path, R[path] || R["/"]); } };
+})();
