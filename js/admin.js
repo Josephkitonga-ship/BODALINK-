@@ -1,4 +1,4 @@
-/* Admin: approve riders, watch dispatch, move float, set fares. */
+/* Admin: approve riders, watch dispatch, give free pass time, set day pass price and fare guides. */
 (function () {
   const BL = (window.BL = window.BL || {});
   let sec, tab = "over", filter = "pending", unsub = null, pending = null;
@@ -11,9 +11,12 @@
       BL.api.count("requests", 'status = "bidding" || status = "open" || status = "assigned" || status = "picked"'),
       BL.api.count("requests", 'created >= "' + new Date(new Date().setHours(0, 0, 0, 0)).toISOString().replace("T", " ") + '"'),
     ]);
+    const dayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString().replace("T", " ");
+    const paid = await BL.api.list("ledger", { filter: 'kind = "pass" && created >= "' + dayStart + '"', perPage: 200 });
+    const income = paid.reduce((a, l) => a + l.amount, 0);
     const live = await BL.api.list("requests", { filter: 'status = "bidding" || status = "open" || status = "assigned" || status = "picked"', sort: "-created", perPage: 20 });
     const stat = (n, l, go) => BL.h`<${BL.raw(go ? "a" : "div")} class="card card--flat grow" ${BL.raw(go ? 'href="' + go + '"' : "")} style="text-decoration:none"><b class="money" style="font-size:30px">${n}</b><p class="muted small">${l}</p></${BL.raw(go ? "a" : "div")}>`;
-    BL.html(body(), BL.h`<div class="row wrap" style="gap:12px">${stat(online, "Riders online")}${stat(active, "Trips in progress")}${stat(today, "Requests today")}
+    BL.html(body(), BL.h`<div class="row wrap" style="gap:12px">${stat(online, "Riders online")}${stat(active, "Trips in progress")}${stat(today, "Requests today")}${stat(BL.money(income), "Pass income today")}
       <button class="card card--flat grow" data-go="riders" style="text-align:left"><b class="money" style="font-size:30px">${pend}</b><p class="muted small">Riders to review</p></button></div>
       <h3 style="margin:22px 0 4px">Dispatch monitor</h3>
       ${live.length ? live.map((r) => BL.h`<div class="item"><span class="badge ${r.kind === "parcel" ? "badge--parcel" : "badge--ok"}">${r.kind === "parcel" ? "Parcel" : "Ride"}</span>
@@ -27,7 +30,7 @@
     BL.html(body(), BL.h`<div class="chips" style="margin-bottom:8px">${["pending", "approved", "other", "all"].map((k) => BL.h`<button class="chip" data-filter="${k}" aria-pressed="${k === filter}">${k[0].toUpperCase() + k.slice(1)}</button>`)}</div>
       ${list.length ? list.map((r) => { const m = r.expand.member; return BL.h`<button class="item" data-rider="${r.id}" style="width:100%;text-align:left">
         <div class="avatar">${BL.initials(m.name)}</div><div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--green)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}, ${BL.stageName(r.home_stage)}</div></div>
-        <div style="text-align:right">${badge(m.status)}<div class="s money">${BL.money(r.float)}</div></div></button>`; }) : BL.h`<div class="empty">Nobody here.</div>`}`);
+        <div style="text-align:right">${badge(m.status)}<div class="s">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass on" : "No pass"}</div></div></button>`; }) : BL.h`<div class="empty">Nobody here.</div>`}`);
   }
 
   async function riderSheet(id) {
@@ -36,11 +39,11 @@
     const doc = (f, l) => (r[f] ? BL.h`<a href="${BL.api.fileUrl(r, f, tok)}" target="_blank" rel="noopener"><img src="${BL.api.fileUrl(r, f, tok)}" alt="${l}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px"><span class="small muted">${l}</span></a>` : BL.h`<div class="card card--flat empty small">${l} missing</div>`);
     BL.sheet(BL.h`<div class="stack"><div class="row"><div class="avatar">${BL.initials(m.name)}</div><div class="grow"><h3>${m.name}</h3><p class="muted small">+${m.phone}, ID ${m.national_id}, ${r.plate}</p></div>${badge(m.status)}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${doc("id_photo", "ID")}${doc("selfie", "Selfie")}${doc("bike_photo", "Bike")}</div>
-      <p class="small muted">Float ${BL.money(r.float)}, ${r.jobs_done} jobs, ${BL.stars(r.rating)}. Emergency contact: ${m.emergency_name || "none"} ${m.emergency_phone ? "+" + m.emergency_phone : ""}</p>
+      <p class="small muted">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass until " + BL.clock(r.pass_until) : "No active pass"}, ${r.jobs_done} jobs, ${BL.stars(r.rating)}. Emergency contact: ${m.emergency_name || "none"} ${m.emergency_phone ? "+" + m.emergency_phone : ""}</p>
       <div class="field"><label for="xReason">Reason (shown to the rider if you reject)</label><input class="input" id="xReason" value="${m.reject_reason || ""}"></div>
       <div class="row wrap">${m.status !== "approved" ? BL.h`<button class="btn btn--green grow" data-s="approved">Approve</button>` : BL.h`<button class="btn btn--danger grow" data-s="suspended">Suspend</button>`}
         ${m.status === "pending" || m.status === "approved" ? BL.h`<button class="btn btn--soft grow" data-s="rejected">Reject</button>` : ""}</div>
-      <div class="row"><input class="input grow" id="xAmt" inputmode="numeric" placeholder="Float adjustment, e.g. 200 or -50"><button class="btn btn--dark" id="xAdj">Apply</button></div></div>`, (s, close) => {
+      <div class="row"><input class="input grow" id="xAmt" inputmode="numeric" placeholder="Give free hours, e.g. 24"><button class="btn btn--dark" id="xAdj">Give</button></div></div>`, (s, close) => {
       BL.$$("[data-s]", s).forEach((b) => (b.onclick = () => BL.busy(b, async () => {
         const status = b.dataset.s, reason = BL.$("#xReason", s).value.trim();
         if (status === "rejected" && !reason) throw new Error("Tell the rider what to fix.");
@@ -48,10 +51,10 @@
         BL.toast("Updated.", "ok"); close(); render();
       })));
       BL.$("#xAdj", s).onclick = (e) => BL.busy(e.currentTarget, async () => {
-        const amount = parseInt(BL.$("#xAmt", s).value, 10);
-        if (!amount) throw new Error("Enter an amount.");
-        const res = await BL.api.post("/api/bl/admin/adjust", { rider: r.id, amount, note: "Admin adjustment" });
-        BL.toast("Float is now " + BL.money(res.float), "ok"); close(); render();
+        const hours = parseInt(BL.$("#xAmt", s).value, 10);
+        if (!(hours >= 1 && hours <= 168)) throw new Error("Enter 1 to 168 hours.");
+        const res = await BL.api.post("/api/bl/admin/grant", { rider: r.id, hours, note: "Free time from BodaLink" });
+        BL.toast("Pass runs until " + BL.clock(res.pass_until), "ok"); close(); render();
       });
     });
   }
@@ -73,18 +76,26 @@
   }
 
   async function money() {
-    const [led, low] = await Promise.all([BL.api.list("ledger", { sort: "-created", expand: "rider.member", perPage: 40 }), BL.api.list("riders", { filter: "float < " + BL.cfg.min_float, expand: "member", perPage: 30 })]);
+    const led = await BL.api.list("ledger", { sort: "-created", expand: "rider.member", perPage: 50 });
     const who = (r) => (r.expand && r.expand.rider && r.expand.rider.expand ? r.expand.rider.expand.member.name : "Rider");
-    BL.html(body(), BL.h`<h3>Riders under the KSh ${BL.cfg.min_float} floor</h3>${low.length ? low.map((r) => BL.h`<div class="item"><div class="grow"><div class="t">${r.expand.member.name}</div><div class="s">${r.plate}, +${r.expand.member.phone}</div></div><b class="money">${BL.money(r.float)}</b></div>`) : BL.h`<div class="empty">Everyone is above the floor.</div>`}
-      <h3 style="margin-top:24px">Float ledger</h3>${led.map((l) => BL.h`<div class="item"><div class="grow"><div class="t">${who(l)}, ${l.kind.replace("_", " ")}</div><div class="s">${l.note}, ${BL.ago(l.created)}</div></div>
-      <div style="text-align:right"><b class="money" style="color:var(--${l.amount < 0 ? "red" : "green-600"})">${l.amount > 0 ? "+" : ""}${BL.money(l.amount)}</b><div class="s">${BL.money(l.balance_after)}</div></div></div>`)}`);
+    const names = { pass: "Day pass", free_pass: "Free first day", admin_pass: "Free time given" };
+    const total = led.filter((l) => l.kind === "pass").reduce((a, l) => a + l.amount, 0);
+    BL.html(body(), BL.h`<div class="card card--flat"><p class="muted small">Day pass income, last 50 entries</p><b class="money" style="font-size:30px">${BL.money(total)}</b></div>
+      <h3 style="margin-top:22px">Day pass history</h3>${led.length ? led.map((l) => BL.h`<div class="item"><div class="grow"><div class="t">${who(l)}, ${names[l.kind] || l.kind}</div><div class="s">${l.note}, ${BL.ago(l.created)}, until ${BL.clock(l.valid_until)}</div></div>
+      <b class="money">${l.amount ? BL.money(l.amount) : "Free"}</b></div>`) : BL.h`<div class="empty">No passes yet.</div>`}`);
   }
 
   async function rates() {
-    const [st, rules] = await Promise.all([BL.api.list("stages", { sort: "name" }), BL.api.list("rate_rules", { sort: "name" })]);
-    BL.html(body(), BL.h`<h3>Conditions</h3><p class="hint">Switch on to raise every suggested fare. Riders still choose their own price.</p>
+    const [st, rules, cfg] = await Promise.all([BL.api.list("stages", { sort: "name" }), BL.api.list("rate_rules", { sort: "name" }), BL.api.list("settings")]);
+    sec._settings = cfg;
+    const price = (cfg.find((c) => c.key === "pass_price") || { value: 100 }).value;
+    const free = (cfg.find((c) => c.key === "free_first_day") || { value: 1 }).value;
+    BL.html(body(), BL.h`<h3>Day pass</h3><p class="hint">What a rider pays for 24 hours online. Riders keep all of their fares.</p>
+      <div class="item"><div class="grow t">Price</div><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="-10" aria-label="Lower pass price">-</button><b class="money" style="min-width:72px;text-align:center">${BL.money(price)}</b><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="10" aria-label="Raise pass price">+</button></div>
+      <div class="item"><div class="grow"><div class="t">Free first day for new riders</div><div class="s">Given when you approve a rider</div></div><button class="switch" role="switch" aria-checked="${!!free}" aria-label="Free first day" data-freeday data-on="${!!free}"></button></div>
+      <h3 style="margin-top:24px">Fare guide conditions</h3><p class="hint">Switch on to raise every suggested fare. Riders still choose their own price on every job.</p>
       ${rules.map((r) => BL.h`<div class="item"><div class="grow t">${r.name} +${r.percent}%</div><button class="switch" role="switch" aria-checked="${r.active}" aria-label="${r.name}" data-rule="${r.id}" data-on="${r.active}"></button></div>`)}
-      <h3 style="margin-top:24px">Stages and base fares</h3>
+      <h3 style="margin-top:24px">Stages and guide fares</h3>
       ${st.map((s) => BL.h`<div class="item"><div class="grow"><div class="t">${s.name}</div><div class="s">Suggested now ${BL.money(Math.round((s.base_fare * (1 + rules.filter((r) => r.active).reduce((a, r) => a + r.percent, 0) / 100)) / 10) * 10)}</div></div>
         <button class="btn btn--soft btn--sm" data-fare="${s.id}" data-d="-10" aria-label="Lower ${s.name} fare">-</button><b class="money" style="min-width:64px;text-align:center">${BL.money(s.base_fare)}</b>
         <button class="btn btn--soft btn--sm" data-fare="${s.id}" data-d="10" data-base="${s.base_fare}" aria-label="Raise ${s.name} fare">+</button>
@@ -109,6 +120,10 @@
         const p = e.target.closest("[data-pass]"); if (p) return passSheet(p.dataset.pass);
         const rule = e.target.closest("[data-rule]"); if (rule) { await BL.api.update("rate_rules", rule.dataset.rule, { active: rule.dataset.on !== "true" }); await BL.loadStages(); return render(); }
         const sg = e.target.closest("[data-stage]"); if (sg) { await BL.api.update("stages", sg.dataset.stage, { active: sg.dataset.on !== "true" }); await BL.loadStages(); return render(); }
+        const set = e.target.closest("[data-set]");
+        if (set) { const c = sec._settings.find((x) => x.key === set.dataset.set); await BL.api.update("settings", c.id, { value: Math.max(10, c.value + +set.dataset.d) }); await BL.api.loadConfig(); return render(); }
+        const fd = e.target.closest("[data-freeday]");
+        if (fd) { const c = sec._settings.find((x) => x.key === "free_first_day"); await BL.api.update("settings", c.id, { value: fd.dataset.on === "true" ? 0 : 1 }); return render(); }
         const fare = e.target.closest("[data-fare]");
         if (fare) { const cur = sec._stages.find((x) => x.id === fare.dataset.fare); await BL.api.update("stages", cur.id, { base_fare: Math.max(50, cur.base_fare + +fare.dataset.d) }); await BL.loadStages(); return render(); }
         if (e.target.closest("#nsAdd")) {

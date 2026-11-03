@@ -6,13 +6,13 @@
     "/": { v: "landing", pub: true }, "/auth": { v: "auth", pub: true },
     "/book": { v: "book", roles: ["passenger"] }, "/trip": { v: "trip", roles: ["passenger"] },
     "/me": { v: "me", roles: ["passenger", "rider", "admin"] },
-    "/rider": { v: "rider", roles: ["rider"] }, "/float": { v: "float", roles: ["rider"] }, "/join": { v: "join", roles: ["rider"] },
+    "/rider": { v: "rider", roles: ["rider"] }, "/pass": { v: "pass", roles: ["rider"] }, "/join": { v: "join", roles: ["rider"] },
     "/admin": { v: "admin", roles: ["admin"] },
   };
   const HOME = { passenger: "#/book", rider: "#/rider", admin: "#/admin" };
   const TABS = {
     passenger: [["#/book", "Book", "book"], ["#/trip", "Trips", "trips"], ["#/me", "Account", "me"]],
-    rider: [["#/rider", "Jobs", "jobs"], ["#/float", "Float", "float"], ["#/me", "Account", "me"]],
+    rider: [["#/rider", "Jobs", "jobs"], ["#/pass", "Pass", "pass"], ["#/me", "Account", "me"]],
     admin: [["#/admin", "Dashboard", "admin"], ["#/me", "Account", "me"]],
   };
   BL.home = () => HOME[BL.api.role] || "#/";

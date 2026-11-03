@@ -101,11 +101,16 @@
     catch (_) { BL.stages = BL.stages || []; BL.rules = []; }
   };
   // Same maths as the server: base fare plus every active rule, rounded to KSh 10
-  BL.fareFor = (stageId) => {
+  BL.SIZES = [["small", "Small", "up to 3 kg"], ["medium", "Medium", "up to 8 kg"], ["large", "Large", "over 8 kg"]];
+  const MULT = { small: 1, medium: 1.2, large: 1.5 };
+  BL.fareFor = (stageId, size) => {
     const s = BL.stages.find((x) => x.id === stageId);
     if (!s) return 150;
     const pct = (BL.rules || []).reduce((a, r) => a + (r.percent || 0), 0);
-    return Math.round((s.base_fare * (1 + pct / 100)) / 10) * 10;
+    return Math.round((s.base_fare * (1 + pct / 100) * (MULT[size] || 1)) / 10) * 10;
+  };
+  BL.sizeChips = (box, selected) => {
+    BL.html(box, BL.h`${BL.SIZES.map(([k, n, d]) => BL.h`<button type="button" class="chip" data-w="${k}" aria-pressed="${k === selected}">${n}, ${d}</button>`)}`);
   };
   BL.fillStages = (select, withBlank) => {
     select.innerHTML = (withBlank ? '<option value="">Choose a stage</option>' : "") + BL.stages.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
@@ -124,7 +129,7 @@
     trips: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     me: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
     jobs: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
-    float: '<path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 7l12-3v3M17 14h.01"/>',
+    pass: '<path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 7l12-3v3M17 14h.01"/>',
     admin: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
     bell: '<path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0"/>',
   }[name] || "");

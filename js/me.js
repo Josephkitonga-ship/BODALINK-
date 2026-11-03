@@ -34,7 +34,7 @@
       $("#mPass").hidden = me.role !== "passenger";
       $("#mNid").value = me.national_id || ""; $("#mEn").value = me.emergency_name || ""; $("#mEp").value = me.emergency_phone ? "0" + me.emergency_phone.slice(3) : "";
       $("#mRider").hidden = me.role !== "rider";
-      $("#mRiderMsg").textContent = { pending: "Finish your documents and starting float. BodaLink reviews riders within a day.", approved: "You are verified and can go online.", rejected: me.reject_reason || "Open your checklist to see what to fix.", suspended: "Your account is suspended. Contact BodaLink." }[me.status] || "";
+      $("#mRiderMsg").textContent = { pending: "Finish your documents. BodaLink reviews riders within a day, and your first 24 hours online are free.", approved: "You are verified and can go online.", rejected: me.reject_reason || "Open your checklist to see what to fix.", suspended: "Your account is suspended. Contact BodaLink." }[me.status] || "";
       $("#mPush").textContent = BL.push.enabled() ? "Alerts are on" : "Turn on job and trip alerts";
       $("#mPush").disabled = BL.push.enabled();
       $("#mInstall").hidden = !BL.canInstall();

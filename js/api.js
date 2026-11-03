@@ -6,8 +6,7 @@
   try { session = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
 
   // Defaults. The server sends the real values from /api/bl/config.
-  BL.cfg = { fee_pct: 0.15, min_float: 200, bid_seconds: 90, grace_seconds: 60,
-    parcel_fees: { light: 100, standard: 150, bulk: 200 }, vapid_public_key: "", dev: false };
+  BL.cfg = { pass_price: 100, pass_hours: 24, bid_seconds: 90, grace_seconds: 60, vapid_public_key: "", dev: false };
 
   const handlers = {};
   BL.on = (evt, fn) => { (handlers[evt] = handlers[evt] || []).push(fn); return () => { handlers[evt] = handlers[evt].filter((f) => f !== fn); }; };
