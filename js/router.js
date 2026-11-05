@@ -73,7 +73,7 @@
     tb.hidden = !tabs.length;
     BL.html(tb, BL.h`${tabs.map(([href, label, ico]) => BL.h`<a href="${href}" ${href === "#" + path ? BL.raw('aria-current="page"') : ""}>
       <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true">${BL.raw(BL.ico(ico))}</svg>${ico === "alerts" ? BL.raw('<i class="nbadge" data-badge="alerts" hidden></i>') : ""}</span><span class="lbl">${label}</span></a>`)}`);
-    BL.html(BL.$("#topright"), BL.h`${BL.canInstall && BL.canInstall() ? BL.h`<button class="btn btn--soft btn--sm" data-install>Install app</button>` : ""}`);
+    BL.html(BL.$("#topright"), BL.h`${BL.canInstall && BL.canInstall() ? BL.h`<button class="btn btn--soft btn--sm" data-install>Install app</button>` : ""}${authed ? "" : BL.h`<a class="btn btn--dark btn--sm" href="#/auth?mode=login">Sign in</a>`}`);
     if (BL.notifications) BL.notifications.paint();
   }
 
