@@ -6,6 +6,7 @@
     <div class="row wrap">
       <a class="btn btn--dark btn--lg" href="#/auth?mode=register&role=passenger&next=/book">Book a ride</a>
       <a class="btn btn--light btn--lg" href="#/auth?mode=register&role=rider">Ride with us</a>
+      <button class="btn btn--lg install-hero" data-install style="background:transparent;border:2px solid var(--ink)">Install the app</button>
     </div>
   </div>
 </section>
@@ -17,16 +18,16 @@
       <button data-k="parcel" aria-pressed="false">Send a parcel</button>
     </div>
     <div class="stack" id="wRide">
-      <div class="field"><label for="wStage">Pickup stage</label><select class="select" id="wStage"></select></div>
-      <div class="field"><label for="wDest">Where to?</label><input class="input" id="wDest" placeholder="Junction Stage" autocomplete="off"></div>
-      <div class="suggest"><span>Riders bid on your trip<br><small class="muted">Suggested fare</small></span><strong class="money" id="wFare">KSh 150</strong></div>
+      <div class="field"><label for="wFrom">From</label><input class="input" id="wFrom" list="places" placeholder="Where should the rider pick you up?" autocomplete="off"></div>
+      <div class="field"><label for="wDest">To</label><input class="input" id="wDest" list="places" placeholder="Where are you going?" autocomplete="off"></div>
+      <p class="hint">Riders bid on your trip. You pick the price and the rider you like.</p>
       <button class="btn btn--green btn--lg btn--block" id="wGo">Find available riders</button>
     </div>
     <div class="stack" id="wParcel" hidden>
-      <div class="field"><label for="wPStage">Stage nearest the pickup</label><select class="select" id="wPStage"></select></div>
-      <div class="field"><label for="wDrop">Deliver to</label><input class="input" id="wDrop" placeholder="Stage 2, near Shell" autocomplete="off"></div>
+      <div class="field"><label for="wPFrom">Pick up from</label><input class="input" id="wPFrom" list="places" placeholder="Shop, home or any place" autocomplete="off"></div>
+      <div class="field"><label for="wDrop">Deliver to</label><input class="input" id="wDrop" list="places" placeholder="Where is it going?" autocomplete="off"></div>
       <div class="chips" id="wWeights" role="group" aria-label="Parcel size"></div>
-      <div class="suggest"><span>Riders bid on your parcel<br><small class="muted">Suggested price</small></span><strong class="money" id="wPFare">KSh 150</strong></div>
+      <p class="hint">Riders bid on your parcel. You pick the price and the rider you like.</p>
       <button class="btn btn--amber btn--lg btn--block" id="wGo2">Find riders for my parcel</button>
     </div>
   </div>
@@ -36,7 +37,7 @@
   <div class="rv"><h2>You name the place. Riders name the price.</h2><p class="muted" style="margin-top:8px">Book a parcel the same way you book a ride. Pick it up from anywhere, send it anywhere. Riders bid, you choose, and you pay your rider directly.</p></div>
   <ol class="steps rv">
     <li class="done">Tell us where to pick up and where to go.</li>
-    <li class="done">Riders at your stage bid in seconds. Pick the price and rider you like.</li>
+    <li class="done">Riders online near you bid in seconds. Pick the price and rider you like.</li>
     <li class="done">Your rider arrives. Parcels use a pickup code so the right person collects.</li>
   </ol>
   <div class="card card--flat rv">

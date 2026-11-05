@@ -2,6 +2,9 @@
 (function () {
   const BL = (window.BL = window.BL || {});
   let sec, rider = null, jobs = [], mine = {}, job = null, contact = null, unsubs = [], ticker = null, beat = null, pending = null;
+  const here = () => (rider && rider.lat ? { lat: rider.lat, lng: rider.lng } : null);
+  // Share the rider's location when the phone allows it. It only helps passengers see who is near.
+  const share = async () => { try { const p = await BL.locate(); return { lat: p.lat, lng: p.lng, loc_at: new Date().toISOString().replace("T", " ") }; } catch (_) { return {}; } };
   const SIZE = { small: "Small", medium: "Medium", large: "Large" };
 
   const myRider = async () => { const l = await BL.api.list("riders", { filter: 'member = "' + BL.api.me.id + '"', perPage: 1 }); rider = l[0] || null; return rider; };
@@ -25,7 +28,7 @@
     const go = $("#rGo");
     go.textContent = rider.online ? "Go offline" : "Go online";
     go.className = "btn btn--lg btn--block go " + (rider.online ? "btn--dark" : "btn--green");
-    BL.html($("#rStages"), BL.h`${BL.stages.map((s) => BL.h`<button class="chip" data-act="stage" data-id="${s.id}" aria-pressed="${s.id === rider.stage}">${s.name}</button>`)}`);
+    $("#rLoc").textContent = rider.lat ? "Shared" : "Not shared";
     const [t, hint] = passText();
     $("#rPass").textContent = t; $("#rPassHint").textContent = hint;
     const msg = { pending: ["Your account is in review", "Finish your documents. We review riders within a day, and your first 24 hours online are free.", "#/join", "Open checklist", "warn"],
@@ -36,24 +39,27 @@
     BL.html($("#rBanner"), m ? BL.h`<div class="card ${m[4] === "err" ? "" : "card--flat"}" style="border-color:var(--${m[4] === "err" ? "red" : "amber"})"><b>${m[0]}</b><p class="small muted" style="margin:4px 0 10px">${m[1]}</p>${m[2] ? BL.h`<a class="btn btn--dark btn--sm" href="${m[2]}">${m[3]}</a>` : ""}</div>` : "");
   }
 
-  const quick = (sug) => [...new Set([sug * 0.8, sug, sug * 1.2, sug * 1.5].map((n) => Math.max(50, Math.round(n / 10) * 10)))];
+  
+  const pickupSpot = (j) => ({ text: j.pickup, lat: j.pickup_lat, lng: j.pickup_lng });
+  const away = (j) => BL.km(here(), j.pickup_lat ? { lat: j.pickup_lat, lng: j.pickup_lng } : null);
 
   function paintJobs() {
-    const list = jobs.filter((j) => j.pickup_stage === rider.stage && (!job || j.id !== job.id));
+    const list = jobs.filter((j) => !job || j.id !== job.id).sort((x, y) => (away(x) === null) - (away(y) === null) || (away(x) || 0) - (away(y) || 0));
     BL.$("#rCount", sec).textContent = rider.online ? list.length : 0;
     const box = BL.$("#rJobs", sec);
-    if (!rider.online) return BL.html(box, BL.h`<div class="card empty"><h3>You are offline</h3><p>Go online to see rides and parcels at your stage.</p></div>`);
+    if (!rider.online) return BL.html(box, BL.h`<div class="card empty"><h3>You are offline</h3><p>Go online to see rides and parcels near you.</p></div>`);
     if (job) return BL.html(box, BL.h`<div class="card empty"><p>Finish your current job to see new ones.</p></div>`);
-    if (!list.length) return BL.html(box, BL.h`<div class="card empty"><div class="pulse"></div><p style="margin-top:24px">Waiting for jobs at ${BL.stageName(rider.stage)}. We will beep when one lands.</p></div>`);
+    if (!list.length) return BL.html(box, BL.h`<div class="card empty"><div class="pulse"></div><p style="margin-top:24px">Waiting for jobs. We will beep when one lands.</p></div>`);
     BL.html(box, BL.h`${list.map((j) => {
-      const p = j.kind === "parcel", m = mine[j.id], left = Math.max(0, Math.round((BL.date(j.bidding_ends).getTime() - Date.now()) / 1000));
-      return BL.h`<article class="card stack job ${p ? "job--parcel" : ""}" data-ends="${j.bidding_ends}"><div class="row between"><span class="badge ${p ? "badge--parcel" : "badge--ok"}">${p ? "Parcel" : "Boda ride"}</span><span class="badge" data-left>${left}s left</span></div>
+      const p = j.kind === "parcel", m = mine[j.id], left = Math.max(0, Math.round((BL.date(j.bidding_ends).getTime() - Date.now()) / 1000)), d = BL.kmText(away(j));
+      return BL.h`<article class="card stack job ${p ? "job--parcel" : ""}" data-ends="${j.bidding_ends}"><div class="row between"><span class="row" style="gap:6px"><span class="badge ${p ? "badge--parcel" : "badge--ok"}">${p ? "Parcel" : "Boda ride"}</span>${d ? BL.h`<span class="badge">${d}</span>` : ""}</span><span class="badge" data-left>${left}s left</span></div>
         <div class="route"><p>${j.pickup}${j.pickup_note ? BL.h`<small class="muted" style="display:block;font-weight:500">${j.pickup_note}</small>` : ""}</p><p>${j.dropoff}</p></div>
         ${p ? BL.h`<p class="small"><b>${j.item}</b>, ${SIZE[j.weight]} parcel. ${j.payer === "recipient" ? "Recipient pays you on delivery." : "Sender pays you at pickup."}</p>` : ""}
-        <p class="hint">Suggested ${BL.money(j.suggested)}.${j.auto_accept ? " They take the first bid up to " + BL.money(j.max_price) + "." : ""} You keep all of your price.</p>
-        <div class="bids">${quick(j.suggested).map((n) => BL.h`<button class="bid" data-act="bid" data-id="${j.id}" data-amt="${n}" aria-pressed="${!!m && m.amount === n}">${n}</button>`)}</div>
+        <div class="row wrap"><a class="maps" target="_blank" rel="noopener" href="${BL.mapsRoute(pickupSpot(j), { text: j.dropoff })}">See route in Google Maps</a></div>
+        ${j.auto_accept ? BL.h`<p class="hint">They take the first bid up to ${BL.money(j.max_price)}.</p>` : ""}
+        <div class="bids">${BL.QUICK_BIDS.map((n) => BL.h`<button class="bid" data-act="bid" data-id="${j.id}" data-amt="${n}" aria-pressed="${!!m && m.amount === n}">${n}</button>`)}</div>
         <div class="row"><input class="input grow" inputmode="numeric" placeholder="Your own price" data-custom="${j.id}"><button class="btn btn--dark" data-act="custom" data-id="${j.id}">Bid</button></div>
-        ${m ? BL.h`<p class="hint"><b>Your bid is ${BL.money(m.amount)}.</b> You can change it until bidding closes.</p>` : ""}</article>`;
+        <p class="hint">You set the price and keep all of it.${m ? BL.h` <b>Your bid is ${BL.money(m.amount)}.</b> You can change it until bidding closes.` : ""}</p></article>`;
     })}`);
   }
 
@@ -69,6 +75,7 @@
       <div class="row between"><span class="badge ${p ? "badge--parcel" : "badge--ok"}">${p ? "Parcel" : "Ride"}, ${picked ? "in progress" : "go to pickup"}</span><b class="money" style="font-size:22px">${BL.money(job.fare)}</b></div>
       <div class="route"><p>${job.pickup}${job.pickup_note ? BL.h`<small class="muted" style="display:block;font-weight:500">${job.pickup_note}</small>` : ""}</p><p>${job.dropoff}</p></div>
       ${p ? BL.h`<p class="small"><b>${job.item}</b>, ${SIZE[job.weight]} parcel</p>` : ""}${who}${recip}
+      <div class="row wrap"><a class="maps" target="_blank" rel="noopener" href="${BL.mapsRoute(null, pickupSpot(job))}">Navigate to pickup</a><a class="maps" target="_blank" rel="noopener" href="${BL.mapsRoute(pickupSpot(job), { text: job.dropoff })}">Navigate to drop-off</a></div>
       <p class="hint">${p ? (job.payer === "recipient" ? "Collect " + BL.money(job.fare) + " from the recipient on delivery." : "The sender pays you " + BL.money(job.fare) + " at pickup.") : "Collect " + BL.money(job.fare) + " in cash from the passenger."}</p>
       ${p && !picked ? BL.h`<div class="field"><label for="rCode">Pickup code from the sender</label><input class="input pin" id="rCode" inputmode="numeric" maxlength="4"></div>` : ""}
       <button class="btn btn--green btn--lg btn--block" data-act="${picked ? "complete" : "start"}" data-id="${job.id}">${picked ? (p ? "Mark delivered" : "Complete ride") : (p ? "Confirm pickup" : "Start ride")}</button>
@@ -95,7 +102,6 @@
   async function act(b) {
     const a = b.dataset.act, id = b.dataset.id;
     const post = (path, body) => BL.api.post(path, body);
-    if (a === "stage") return patchRider({ stage: id }).then(() => { paintStatus(); paintJobs(); }).catch((e) => BL.toast(e.message, "err"));
     if (a === "bid" || a === "custom") {
       const amt = a === "bid" ? +b.dataset.amt : parseInt((BL.$('[data-custom="' + id + '"]', sec).value || "").replace(/\D/g, ""), 10);
       if (!(amt >= 50 && amt <= 2000)) return BL.toast("Enter a price between KSh 50 and KSh 2,000.", "err");
@@ -119,13 +125,13 @@
       sec = s;
       BL.$("#rGo", sec).onclick = (e) => {
         if (!rider.online && !passOn() && BL.api.me.status === "approved") { BL.toast("Buy a day pass to go online.", "err"); location.hash = "#/pass"; return; }
-        BL.busy(e.currentTarget, async () => { await patchRider({ online: !rider.online }); paintStatus(); await loadJobs(); BL.toast(rider.online ? "You are online." : "You are offline.", rider.online ? "ok" : ""); });
+        BL.busy(e.currentTarget, async () => { await patchRider({ online: !rider.online, ...(rider.online ? {} : await share()) }); paintStatus(); await loadJobs(); BL.toast(rider.online ? "You are online." : "You are offline.", rider.online ? "ok" : ""); });
       };
       sec.addEventListener("click", (e) => { const b = e.target.closest("[data-act]"); if (b) act(b); });
     },
     async show() {
       if (!(await myRider())) return BL.toast("Rider profile missing. Contact BodaLink.", "err");
-      await BL.api.refresh(); await BL.loadStages();
+      await BL.api.refresh();
       paintStatus(); await loadJobs();
       unsubs = [BL.realtime.on("requests/*", () => soon(loadJobs)), BL.realtime.on("bids/*", () => soon(loadJobs)),
         BL.realtime.on("riders/*", (ev) => { if (ev.record.id === rider.id) { rider = ev.record; paintStatus(); paintJobs(); } })];
@@ -134,7 +140,7 @@
         BL.$$("[data-ends]", sec).forEach((c) => { const l = Math.max(0, Math.round((BL.date(c.dataset.ends).getTime() - Date.now()) / 1000)); BL.$("[data-left]", c).textContent = l + "s left"; });
         if (rider.online && !passOn()) { rider.online = false; paintStatus(); paintJobs(); BL.toast("Your day pass ended.", "err"); }
       }, 1000);
-      beat = setInterval(() => { if (rider && rider.online && !document.hidden) patchRider({ online: true }).catch(() => {}); }, 45000);
+      beat = setInterval(() => { if (rider && rider.online && !document.hidden) share().then((loc) => patchRider({ online: true, ...loc })).catch(() => {}); }, 45000);
     },
     hide() { unsubs.forEach((u) => u()); unsubs = []; clearInterval(ticker); clearInterval(beat); },
   };

@@ -40,3 +40,22 @@
 @media(min-width:900px){#aBody{max-width:860px}}
 .suggest strong{white-space:nowrap}
 .powered{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:800;font-size:13px;letter-spacing:.01em}
+
+/* WhatsApp-style bottom navigation: icon in a pill, bold label when active, red count on Alerts */
+.tabbar{height:calc(var(--nav-h) + env(safe-area-inset-bottom));background:var(--bg)}
+.tabbar a{gap:3px;padding-top:6px;font-weight:600}
+.tabbar .pill{position:relative;display:grid;place-items:center;width:64px;height:32px;border-radius:16px;transition:background .25s var(--ease)}
+.tabbar a[aria-current] .pill{background:var(--green)}
+.tabbar a[aria-current] svg{color:var(--on-green);stroke-width:2.3}
+.tabbar a[aria-current] .lbl{font-weight:800;color:var(--ink)}
+.tabbar a[aria-current]::before{display:none}
+.tabbar .nbadge{position:absolute;top:-4px;right:8px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-style:normal;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid var(--bg)}
+.tabbar .nbadge[hidden]{display:none}
+.alert.unread{background:var(--green-100);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px}
+.alert.unread .t::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green-600);margin-right:8px}
+@media(min-width:900px){.tabbar .pill{width:56px}}
+
+/* location and Maps */
+.locate{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:var(--r-pill);background:var(--green-100);color:var(--ink);font-weight:700;font-size:14px}
+.maps{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:var(--r-pill);border:1.5px solid var(--line);font-weight:700;font-size:14px;text-decoration:none}
+.maps::before{content:"";width:12px;height:12px;border-radius:50% 50% 50% 0;background:var(--red);transform:rotate(-45deg)}

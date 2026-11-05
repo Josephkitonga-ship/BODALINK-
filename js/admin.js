@@ -29,7 +29,7 @@
     const list = await BL.api.list("riders", { filter: f, expand: "member", sort: "-created", perPage: 60 });
     BL.html(body(), BL.h`<div class="chips" style="margin-bottom:8px">${["pending", "approved", "other", "all"].map((k) => BL.h`<button class="chip" data-filter="${k}" aria-pressed="${k === filter}">${k[0].toUpperCase() + k.slice(1)}</button>`)}</div>
       ${list.length ? list.map((r) => { const m = r.expand.member; return BL.h`<button class="item" data-rider="${r.id}" style="width:100%;text-align:left">
-        <div class="avatar">${BL.initials(m.name)}</div><div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--green)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}, ${BL.stageName(r.home_stage)}</div></div>
+        <div class="avatar">${BL.initials(m.name)}</div><div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--green)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}</div></div>
         <div style="text-align:right">${badge(m.status)}<div class="s">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass on" : "No pass"}</div></div></button>`; }) : BL.h`<div class="empty">Nobody here.</div>`}`);
   }
 
@@ -86,22 +86,16 @@
   }
 
   async function rates() {
-    const [st, rules, cfg] = await Promise.all([BL.api.list("stages", { sort: "name" }), BL.api.list("rate_rules", { sort: "name" }), BL.api.list("settings")]);
+    const [places, cfg] = await Promise.all([BL.api.list("stages", { sort: "name" }), BL.api.list("settings")]);
     sec._settings = cfg;
     const price = (cfg.find((c) => c.key === "pass_price") || { value: 100 }).value;
     const free = (cfg.find((c) => c.key === "free_first_day") || { value: 1 }).value;
-    BL.html(body(), BL.h`<h3>Day pass</h3><p class="hint">What a rider pays for 24 hours online. Riders keep all of their fares.</p>
+    BL.html(body(), BL.h`<h3>Day pass</h3><p class="hint">What a rider pays for 24 hours online. Riders set their own prices and keep all of their fares.</p>
       <div class="item"><div class="grow t">Price</div><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="-10" aria-label="Lower pass price">-</button><b class="money" style="min-width:72px;text-align:center">${BL.money(price)}</b><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="10" aria-label="Raise pass price">+</button></div>
       <div class="item"><div class="grow"><div class="t">Free first day for new riders</div><div class="s">Given when you approve a rider</div></div><button class="switch" role="switch" aria-checked="${!!free}" aria-label="Free first day" data-freeday data-on="${!!free}"></button></div>
-      <h3 style="margin-top:24px">Fare guide conditions</h3><p class="hint">Switch on to raise every suggested fare. Riders still choose their own price on every job.</p>
-      ${rules.map((r) => BL.h`<div class="item"><div class="grow t">${r.name} +${r.percent}%</div><button class="switch" role="switch" aria-checked="${r.active}" aria-label="${r.name}" data-rule="${r.id}" data-on="${r.active}"></button></div>`)}
-      <h3 style="margin-top:24px">Stages and guide fares</h3>
-      ${st.map((s) => BL.h`<div class="item"><div class="grow"><div class="t">${s.name}</div><div class="s">Suggested now ${BL.money(Math.round((s.base_fare * (1 + rules.filter((r) => r.active).reduce((a, r) => a + r.percent, 0) / 100)) / 10) * 10)}</div></div>
-        <button class="btn btn--soft btn--sm" data-fare="${s.id}" data-d="-10" aria-label="Lower ${s.name} fare">-</button><b class="money" style="min-width:64px;text-align:center">${BL.money(s.base_fare)}</b>
-        <button class="btn btn--soft btn--sm" data-fare="${s.id}" data-d="10" data-base="${s.base_fare}" aria-label="Raise ${s.name} fare">+</button>
-        <button class="switch" role="switch" aria-checked="${s.active}" aria-label="${s.name} active" data-stage="${s.id}" data-on="${s.active}"></button></div>`)}
-      <div class="row" style="margin-top:16px"><input class="input grow" id="nsName" placeholder="New stage name"><input class="input" id="nsFare" inputmode="numeric" placeholder="Fare" style="width:90px"><button class="btn btn--dark" id="nsAdd">Add</button></div>`);
-    sec._stages = st;
+      <h3 style="margin-top:24px">Place suggestions</h3><p class="hint">Popular places that appear as suggestions when a passenger types From or To. Passengers can still type any place.</p>
+      ${places.map((s) => BL.h`<div class="item"><div class="grow t">${s.name}</div><button class="btn btn--danger btn--sm" data-delplace="${s.id}" aria-label="Remove ${s.name}">Remove</button></div>`)}
+      <div class="row" style="margin-top:16px"><input class="input grow" id="nsName" placeholder="New place, e.g. Kimana Market"><button class="btn btn--dark" id="nsAdd">Add</button></div>`);
   }
 
   async function render() {
@@ -118,18 +112,16 @@
         const f = e.target.closest("[data-filter]"); if (f) { filter = f.dataset.filter; return render(); }
         const r = e.target.closest("[data-rider]"); if (r) return riderSheet(r.dataset.rider);
         const p = e.target.closest("[data-pass]"); if (p) return passSheet(p.dataset.pass);
-        const rule = e.target.closest("[data-rule]"); if (rule) { await BL.api.update("rate_rules", rule.dataset.rule, { active: rule.dataset.on !== "true" }); await BL.loadStages(); return render(); }
-        const sg = e.target.closest("[data-stage]"); if (sg) { await BL.api.update("stages", sg.dataset.stage, { active: sg.dataset.on !== "true" }); await BL.loadStages(); return render(); }
         const set = e.target.closest("[data-set]");
         if (set) { const c = sec._settings.find((x) => x.key === set.dataset.set); await BL.api.update("settings", c.id, { value: Math.max(10, c.value + +set.dataset.d) }); await BL.api.loadConfig(); return render(); }
         const fd = e.target.closest("[data-freeday]");
         if (fd) { const c = sec._settings.find((x) => x.key === "free_first_day"); await BL.api.update("settings", c.id, { value: fd.dataset.on === "true" ? 0 : 1 }); return render(); }
-        const fare = e.target.closest("[data-fare]");
-        if (fare) { const cur = sec._stages.find((x) => x.id === fare.dataset.fare); await BL.api.update("stages", cur.id, { base_fare: Math.max(50, cur.base_fare + +fare.dataset.d) }); await BL.loadStages(); return render(); }
+        const del = e.target.closest("[data-delplace]");
+        if (del) { await BL.api.req("DELETE", "/api/collections/stages/records/" + del.dataset.delplace); await BL.loadPlaces(); return render(); }
         if (e.target.closest("#nsAdd")) {
-          const name = BL.$("#nsName", sec).value.trim(), fr = parseInt(BL.$("#nsFare", sec).value, 10);
-          if (name.length < 2 || !fr) return BL.toast("Enter a name and a fare.", "err");
-          try { await BL.api.create("stages", { name, base_fare: fr, active: true }); await BL.loadStages(); render(); } catch (er) { BL.toast(er.message, "err"); }
+          const name = BL.$("#nsName", sec).value.trim();
+          if (name.length < 2) return BL.toast("Enter a place name.", "err");
+          try { await BL.api.create("stages", { name, base_fare: 0, active: true }); await BL.loadPlaces(); render(); } catch (er) { BL.toast(er.message, "err"); }
         }
       });
     },

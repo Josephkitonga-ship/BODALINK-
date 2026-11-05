@@ -1,8 +1,8 @@
 /* BodaLink service worker: offline app shell and push alerts. Bump CACHE when files change. */
-const CACHE = "bodalink-v4";
+const CACHE = "bodalink-v5";
 const SHELL = ["./", "index.html", "css/tokens.css", "css/base.css", "css/components.css", "css/screens.css",
-  "js/server.js", "js/api.js", "js/ui.js", "js/push.js", "js/router.js", "js/landing.js", "js/auth.js", "js/passenger.js", "js/me.js", "js/rider.js", "js/admin.js", "js/app.js",
-  "views/landing.html", "views/auth.html", "views/book.html", "views/trip.html", "views/me.html", "views/rider.html", "views/pass.html", "views/join.html", "views/admin.html",
+  "js/server.js", "js/api.js", "js/ui.js", "js/push.js", "js/router.js", "js/landing.js", "js/auth.js", "js/passenger.js", "js/alerts.js", "js/me.js", "js/rider.js", "js/admin.js", "js/app.js",
+  "views/landing.html", "views/auth.html", "views/book.html", "views/trip.html", "views/alerts.html", "views/me.html", "views/rider.html", "views/pass.html", "views/join.html", "views/admin.html",
   "icons/icon.svg", "icons/icon-192.png", "manifest.webmanifest"];
 
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });

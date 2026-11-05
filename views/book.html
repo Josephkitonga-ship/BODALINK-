@@ -11,24 +11,24 @@
       <button data-k="parcel" aria-pressed="false">Send a parcel</button>
     </div>
     <form class="stack" id="bRide" novalidate>
-      <div class="field"><label for="bStage">Pickup stage</label><select class="select" id="bStage"></select></div>
-      <div class="field"><label for="bDest">Where to?</label><input class="input" id="bDest" placeholder="Junction Stage" autocomplete="off"></div>
-      <div class="suggest"><span>Riders bid on your trip<br><small class="muted">Suggested fare</small></span><strong class="money" id="bFare">KSh 150</strong></div>
+      <div class="field"><label for="bFrom">From</label><input class="input" id="bFrom" list="places" placeholder="Where should the rider pick you up?" autocomplete="off">
+        <button type="button" class="locate" data-locate="bFrom">Use my current location</button></div>
+      <div class="field"><label for="bDest">To</label><input class="input" id="bDest" list="places" placeholder="Where are you going?" autocomplete="off"></div>
       <div class="field"><label for="bMax">Most I will pay (optional)</label><input class="input" id="bMax" inputmode="numeric" placeholder="KSh 150"></div>
       <div class="row between"><span id="bAutoL">Take the first bid at or under my price</span><button type="button" class="switch" data-auto="ride" role="switch" aria-checked="false" aria-labelledby="bAutoL"></button></div>
       <button class="btn btn--green btn--lg btn--block" type="submit">Request bids</button>
     </form>
     <form class="stack" id="bParcel" hidden novalidate>
-      <div class="field"><label for="bPStage">Stage nearest the pickup</label><select class="select" id="bPStage"></select></div>
-      <div class="field"><label for="bPNote">Where exactly? (optional)</label><input class="input" id="bPNote" placeholder="Hardware shop behind the market" autocomplete="off"></div>
-      <div class="field"><label for="bDrop">Deliver to</label><input class="input" id="bDrop" placeholder="Stage 2, near Shell" autocomplete="off"></div>
+      <div class="field"><label for="bPFrom">Pick up from</label><input class="input" id="bPFrom" list="places" placeholder="Shop, home or any place" autocomplete="off">
+        <button type="button" class="locate" data-locate="bPFrom">Use my current location</button></div>
+      <div class="field"><label for="bPNote">Extra pickup details (optional)</label><input class="input" id="bPNote" placeholder="Hardware shop behind the market" autocomplete="off"></div>
+      <div class="field"><label for="bDrop">Deliver to</label><input class="input" id="bDrop" list="places" placeholder="Where is it going?" autocomplete="off"></div>
       <div class="field"><label for="bItem">What are you sending?</label><input class="input" id="bItem" placeholder="Box of spare parts" autocomplete="off"></div>
       <div class="chips" id="bWeights" role="group" aria-label="Parcel size"></div>
       <div class="field"><label for="bRName">Recipient name</label><input class="input" id="bRName" autocomplete="off"></div>
       <div class="field"><label for="bRPhone">Recipient phone</label><input class="input" id="bRPhone" type="tel" inputmode="tel" placeholder="0712 345 678"></div>
       <div class="field"><span class="label">Who pays the rider?</span>
         <div class="chips" id="bPayer" role="group" aria-label="Who pays"><button type="button" class="chip" data-payer="sender" aria-pressed="true">I pay at pickup</button><button type="button" class="chip" data-payer="recipient" aria-pressed="false">Recipient pays on delivery</button></div></div>
-      <div class="suggest"><span>Riders bid on your parcel<br><small class="muted">Suggested price</small></span><strong class="money" id="bPFare">KSh 150</strong></div>
       <div class="field"><label for="bPMax">Most I will pay (optional)</label><input class="input" id="bPMax" inputmode="numeric" placeholder="KSh 200"></div>
       <div class="row between"><span id="bPAutoL">Take the first bid at or under my price</span><button type="button" class="switch" data-auto="parcel" role="switch" aria-checked="false" aria-labelledby="bPAutoL"></button></div>
       <button class="btn btn--amber btn--lg btn--block" type="submit">Request bids</button>

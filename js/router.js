@@ -5,15 +5,15 @@
   const R = {
     "/": { v: "landing", pub: true }, "/auth": { v: "auth", pub: true },
     "/book": { v: "book", roles: ["passenger"] }, "/trip": { v: "trip", roles: ["passenger"] },
-    "/me": { v: "me", roles: ["passenger", "rider", "admin"] },
+    "/alerts": { v: "alerts", roles: ["passenger", "rider", "admin"] }, "/me": { v: "me", roles: ["passenger", "rider", "admin"] },
     "/rider": { v: "rider", roles: ["rider"] }, "/pass": { v: "pass", roles: ["rider"] }, "/join": { v: "join", roles: ["rider"] },
     "/admin": { v: "admin", roles: ["admin"] },
   };
   const HOME = { passenger: "#/book", rider: "#/rider", admin: "#/admin" };
   const TABS = {
-    passenger: [["#/book", "Book", "book"], ["#/trip", "Trips", "trips"], ["#/me", "Account", "me"]],
-    rider: [["#/rider", "Jobs", "jobs"], ["#/pass", "Pass", "pass"], ["#/me", "Account", "me"]],
-    admin: [["#/admin", "Dashboard", "admin"], ["#/me", "Account", "me"]],
+    passenger: [["#/book", "Home", "home"], ["#/trip", "Trips", "trips"], ["#/alerts", "Alerts", "alerts"], ["#/me", "Account", "me"]],
+    rider: [["#/rider", "Jobs", "jobs"], ["#/pass", "Earnings", "pass"], ["#/alerts", "Alerts", "alerts"], ["#/me", "Account", "me"]],
+    admin: [["#/admin", "Dashboard", "admin"], ["#/alerts", "Alerts", "alerts"], ["#/me", "Account", "me"]],
   };
   BL.home = () => HOME[BL.api.role] || "#/";
 
@@ -71,17 +71,10 @@
     const tb = BL.$("#tabbar");
     const tabs = authed && r.v !== "landing" ? TABS[BL.api.role] || [] : [];
     tb.hidden = !tabs.length;
-    BL.html(tb, BL.h`${tabs.map(([href, label, ico]) => BL.h`<a href="${href}" ${href === "#/" + path.slice(1) ? BL.raw('aria-current="page"') : ""}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">${BL.raw(BL.ico(ico))}</svg>${label}</a>`)}`);
-    const tr = BL.$("#topright");
-    if (!authed) {
-      BL.html(tr, BL.h`<a class="btn btn--dark btn--sm" href="#/auth?mode=login">Sign in</a>`);
-    } else {
-      BL.html(tr, BL.h`<button class="btn btn--soft btn--sm" id="bell" aria-label="Notifications" style="position:relative;padding:0 12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${BL.raw(BL.ico("bell"))}</svg><span class="dot-n" id="bellN" hidden></span></button>
-        <a class="avatar" style="width:38px;height:38px;font-size:14px;text-decoration:none" href="#/me" aria-label="My account">${BL.initials(BL.api.me.name)}</a>`);
-      BL.$("#bell").onclick = () => BL.notifications.open();
-      BL.notifications.paint();
-    }
+    BL.html(tb, BL.h`${tabs.map(([href, label, ico]) => BL.h`<a href="${href}" ${href === "#" + path ? BL.raw('aria-current="page"') : ""}>
+      <span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true">${BL.raw(BL.ico(ico))}</svg>${ico === "alerts" ? BL.raw('<i class="nbadge" data-badge="alerts" hidden></i>') : ""}</span><span class="lbl">${label}</span></a>`)}`);
+    BL.html(BL.$("#topright"), BL.h`${BL.canInstall && BL.canInstall() ? BL.h`<button class="btn btn--soft btn--sm" data-install>Install app</button>` : ""}`);
+    if (BL.notifications) BL.notifications.paint();
   }
 
   BL.router = { start() { window.addEventListener("hashchange", go); go(); }, go, parse, chrome: () => { const { path } = parse(); chrome(path, R[path] || R["/"]); } };

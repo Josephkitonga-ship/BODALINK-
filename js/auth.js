@@ -27,7 +27,6 @@
       const pinOk = (p) => /^\d{6}$/.test(p);
       const devFill = (r, input, hint) => { if (r.dev_code) { input.value = r.dev_code; hint.textContent = "Test mode: your code was filled in for you."; } };
 
-      BL.fillStages($("#rStage"), true);
       BL.$$("#aTabs [data-m]", sec).forEach((b) => (b.onclick = () => { showForm(b.dataset.m); if (b.dataset.m === "register") step(st.role ? 2 : 1); }));
       $("#toReset").onclick = () => showForm("reset");
       $("#toLogin").onclick = () => showForm("login");
@@ -48,7 +47,6 @@
           if (st.role === "rider") {
             if (!/^\d{6,10}$/.test($("#rNid").value.trim())) return BL.toast("Enter your national ID number.", "err");
             if ($("#rPlate").value.trim().length < 5) return BL.toast("Enter your motorbike registration.", "err");
-            if (!$("#rStage").value) return BL.toast("Pick your home stage.", "err");
           }
           BL.busy(e.submitter, async () => {
             const r = await BL.api.otp($("#rPhone").value, "register");
@@ -62,7 +60,7 @@
           BL.busy(e.submitter, async () => {
             await BL.api.register({
               role: st.role, name: $("#rName").value.trim(), phone: $("#rPhone").value, otp: $("#rCode").value.trim(), pin: $("#rPin").value,
-              national_id: $("#rNid").value.trim(), plate: $("#rPlate").value.trim(), home_stage: $("#rStage").value,
+              national_id: $("#rNid").value.trim(), plate: $("#rPlate").value.trim(),
               emergency_name: $("#rEName").value.trim(), emergency_phone: $("#rEPhone").value,
             });
             done(true);

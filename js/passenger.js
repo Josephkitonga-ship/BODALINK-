@@ -7,44 +7,49 @@
   /* ---------- book ---------- */
   let size = "small", payer = "sender";
   const auto = { ride: false, parcel: false };
+  const coords = { bFrom: null, bPFrom: null };
   BL.views.book = {
     mount(sec) {
       const $ = (s) => BL.$(s, sec);
-      BL.fillStages($("#bStage")); BL.fillStages($("#bPStage"));
-      const fares = () => {
-        $("#bFare").textContent = BL.money(BL.fareFor($("#bStage").value));
-        $("#bPFare").textContent = BL.money(BL.fareFor($("#bPStage").value, size));
-      };
-      $("#bStage").onchange = fares; $("#bPStage").onchange = fares; fares();
       BL.sizeChips($("#bWeights"), size);
       const tab = (k) => {
         BL.$$("#bTabs [data-k]", sec).forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === k));
         $("#bRide").hidden = k !== "ride"; $("#bParcel").hidden = k !== "parcel";
       };
-      sec._tab = tab; sec._fares = fares;
-      sec.addEventListener("click", (e) => {
+      sec._tab = tab;
+      sec.addEventListener("click", async (e) => {
         const t = e.target.closest("#bTabs [data-k]"); if (t) tab(t.dataset.k);
-        const w = e.target.closest("[data-w]"); if (w) { size = w.dataset.w; BL.sizeChips($("#bWeights"), size); fares(); }
+        const w = e.target.closest("[data-w]"); if (w) { size = w.dataset.w; BL.sizeChips($("#bWeights"), size); }
         const p = e.target.closest("[data-payer]"); if (p) { payer = p.dataset.payer; BL.$$("[data-payer]", sec).forEach((b) => b.setAttribute("aria-pressed", b === p)); }
         const a = e.target.closest("[data-auto]"); if (a) { auto[a.dataset.auto] = !auto[a.dataset.auto]; a.setAttribute("aria-checked", auto[a.dataset.auto]); }
+        const l = e.target.closest("[data-locate]");
+        if (l) BL.busy(l, async () => {
+          const id = l.dataset.locate, pos = await BL.locate();
+          coords[id] = pos;
+          const box = $("#" + id);
+          if (!box.value.trim() || /^my current location/i.test(box.value)) box.value = "My current location";
+          BL.toast("Location shared. Riders can open it in Google Maps.", "ok");
+        });
       });
+      // typing a new pickup place replaces a shared location
+      ["bFrom", "bPFrom"].forEach((id) => $("#" + id).addEventListener("input", (e) => { if (!/^my current location/i.test(e.target.value)) coords[id] = null; }));
       const maxOf = (el) => parseInt(el.value.replace(/\D/g, ""), 10) || 0;
+      const where = (id, c) => (c[id] ? { pickup_lat: c[id].lat, pickup_lng: c[id].lng } : {});
       $("#bRide").onsubmit = (e) => {
         e.preventDefault();
-        const dest = $("#bDest").value.trim();
-        if (!$("#bStage").value) return BL.toast("Pick your pickup stage.", "err");
-        if (dest.length < 2) return BL.toast("Tell us where you are going.", "err");
-        const body = { kind: "ride", pickup_stage: $("#bStage").value, dropoff: dest };
+        if ($("#bFrom").value.trim().length < 2) return BL.toast("Tell us where to pick you up.", "err");
+        if ($("#bDest").value.trim().length < 2) return BL.toast("Tell us where you are going.", "err");
+        const body = { kind: "ride", pickup: $("#bFrom").value.trim(), dropoff: $("#bDest").value.trim(), ...where("bFrom", coords) };
         const max = maxOf($("#bMax")); if (max) { body.max_price = max; body.auto_accept = auto.ride; }
         BL.busy(e.submitter, async () => { await BL.api.create("requests", body); location.hash = "#/trip"; });
       };
       $("#bParcel").onsubmit = (e) => {
         e.preventDefault();
-        const need = [["#bDrop", "Enter where the parcel is going."], ["#bItem", "Say what you are sending."], ["#bRName", "Enter the recipient's name."]];
+        const need = [["#bPFrom", "Tell us where to pick the parcel up."], ["#bDrop", "Enter where the parcel is going."], ["#bItem", "Say what you are sending."], ["#bRName", "Enter the recipient's name."]];
         for (const [id, msg] of need) if ($(id).value.trim().length < 2) return BL.toast(msg, "err");
         if (!BL.normPhone($("#bRPhone").value)) return BL.toast("Enter the recipient's phone number.", "err");
-        const body = { kind: "parcel", pickup_stage: $("#bPStage").value, pickup_note: $("#bPNote").value.trim(), dropoff: $("#bDrop").value.trim(), item: $("#bItem").value.trim(),
-          weight: size, payer, recipient_name: $("#bRName").value.trim(), recipient_phone: $("#bRPhone").value.trim() };
+        const body = { kind: "parcel", pickup: $("#bPFrom").value.trim(), pickup_note: $("#bPNote").value.trim(), dropoff: $("#bDrop").value.trim(), item: $("#bItem").value.trim(),
+          weight: size, payer, recipient_name: $("#bRName").value.trim(), recipient_phone: $("#bRPhone").value.trim(), ...where("bPFrom", coords) };
         const max = maxOf($("#bPMax")); if (max) { body.max_price = max; body.auto_accept = auto.parcel; }
         BL.busy(e.submitter, async () => { await BL.api.create("requests", body); location.hash = "#/trip"; });
       };
@@ -53,18 +58,16 @@
       const me = BL.api.me, $ = (s) => BL.$(s, sec);
       $("#bHello").textContent = "Hi " + me.name.split(" ")[0];
       $("#bNudge").hidden = !!(me.id_verified || me.national_id);
-      BL.fillStages($("#bStage")); BL.fillStages($("#bPStage"));
       let d = null;
       try { d = JSON.parse(localStorage.getItem("bl.draft") || "null"); } catch (_) {}
       if (d) {
         localStorage.removeItem("bl.draft");
         const parcel = d.kind === "parcel";
         sec._tab(parcel ? "parcel" : "ride");
-        if (d.pickup_stage) $(parcel ? "#bPStage" : "#bStage").value = d.pickup_stage;
+        if (d.pickup) $(parcel ? "#bPFrom" : "#bFrom").value = d.pickup;
         if (d.dropoff) $(parcel ? "#bDrop" : "#bDest").value = d.dropoff;
         if (d.weight) { size = d.weight; BL.sizeChips($("#bWeights"), size); }
       }
-      sec._fares();
       try {
         const busy = await BL.api.list("requests", { filter: 'passenger = "' + me.id + '" && (status = "bidding" || status = "assigned" || status = "picked")', perPage: 1 });
         if (busy.length) location.hash = "#/trip";
@@ -86,6 +89,8 @@
   const shareText = (r) => (r.kind === "ride"
     ? `BodaLink ride from ${r.pickup} to ${r.dropoff}. Rider ${r.rider_name}, ${r.rider_plate}, KSh ${r.fare}.`
     : `BodaLink parcel (${r.item}) from ${r.pickup} to ${r.dropoff}. Rider ${r.rider_name}, ${r.rider_plate}, KSh ${r.fare}.`);
+  const dist = (b) => BL.kmText(BL.km(active && active.pickup_lat ? { lat: active.pickup_lat, lng: active.pickup_lng } : null, { lat: b.rider_lat, lng: b.rider_lng }));
+  const mapsBtn = (r) => BL.h`<a class="maps" target="_blank" rel="noopener" href="${BL.mapsRoute({ text: r.pickup, lat: r.pickup_lat, lng: r.pickup_lng }, { text: r.dropoff })}">Route in Google Maps</a>`;
   const kindBadge = (r) => BL.h`<span class="badge ${r.kind === "parcel" ? "badge--parcel" : "badge--ok"}">${r.kind === "parcel" ? "Parcel" : "Boda ride"}</span>`;
   const codeCard = () => BL.h`<div class="card card--flat center"><p class="small muted">Pickup code. Give it to the rider when they collect the parcel.</p><div class="money" style="font-size:38px;letter-spacing:.2em">${secret ? secret.code : ""}</div></div>`;
 
@@ -96,12 +101,12 @@
     if (r.status === "bidding") {
       const left = Math.max(0, Math.round((BL.date(r.bidding_ends).getTime() - Date.now()) / 1000));
       return BL.h`<div class="card stack">${head}${route(r)}${item}
-        <div class="row between"><div><b>${left > 0 ? "Riders are bidding" : "Picking the best bid"}</b><p class="hint">Suggested ${BL.money(r.suggested)}${r.auto_accept ? ". We take the first bid at or under " + BL.money(r.max_price) + "." : ""}</p></div>
+        <div class="row between"><div><b>${left > 0 ? "Riders are bidding" : "Picking the best bid"}</b><p class="hint">Riders set their own prices.${r.auto_accept ? " We take the first bid at or under " + BL.money(r.max_price) + "." : ""}</p></div>
           <div class="ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/><circle cx="22" cy="22" r="18" id="ringC" style="stroke-dashoffset:${113.1 * (1 - left / BL.cfg.bid_seconds)}"/></svg><span id="ringT">${left}</span></div></div>
         ${bids.length ? bids.map((b) => BL.h`<div class="item"><div class="avatar">${BL.initials(b.rider_name)}</div>
-          <div class="grow"><div class="t">${b.rider_name}</div><div class="s">${b.rider_plate}, ${BL.stars(b.rider_rating)}</div></div>
+          <div class="grow"><div class="t">${b.rider_name}</div><div class="s">${b.rider_plate}, ${BL.stars(b.rider_rating)}${dist(b) ? ", " + dist(b) : ""}</div></div>
           <b class="money" style="font-size:19px">${BL.money(b.amount)}</b><button class="btn btn--green btn--sm" data-act="accept" data-id="${b.id}">Accept</button></div>`)
-          : BL.h`<div class="empty"><div class="pulse"></div><p style="margin-top:22px">Asking riders at your stage. Bids appear here.</p></div>`}
+          : BL.h`<div class="empty"><div class="pulse"></div><p style="margin-top:22px">Asking riders near you. Bids appear here.</p></div>`}
         <button class="btn btn--soft btn--block" data-act="cancel">Cancel request</button></div>`;
     }
     return BL.h`<div class="card stack">${head}${route(r)}${item}
@@ -111,7 +116,7 @@
       ${steps(r)}
       <div class="row wrap">${contact ? BL.h`<a class="btn btn--dark grow" href="${BL.tel(contact.phone)}">Call rider</a>
         <a class="btn btn--soft grow" target="_blank" rel="noopener" href="${BL.waLink(contact.phone, "Hi " + r.rider_name.split(" ")[0] + ", I am your BodaLink " + (p ? "sender" : "passenger") + " at " + r.pickup + ".")}">WhatsApp</a>` : ""}
-        <a class="btn btn--soft grow" target="_blank" rel="noopener" href="${BL.waLink("", shareText(r))}">Share trip</a></div>
+        <a class="btn btn--soft grow" target="_blank" rel="noopener" href="${BL.waLink("", shareText(r))}">Share trip</a>${mapsBtn(r)}</div>
       ${r.status === "assigned" ? BL.h`<button class="btn btn--danger btn--block" data-act="cancel">Cancel trip</button>` : ""}
       <p class="hint">${payLine(r)}</p></div>`;
   }

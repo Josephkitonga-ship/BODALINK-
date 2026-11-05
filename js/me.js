@@ -6,8 +6,7 @@
       const $ = (s) => BL.$(s, sec);
       $("#mOut").onclick = () => BL.api.logout();
       $("#mPush").onclick = (e) => BL.busy(e.currentTarget, async () => { await BL.push.enable(); BL.toast("Alerts are on.", "ok"); BL.views.me.show(sec); });
-      $("#mInstall").onclick = async () => { await BL.install(); $("#mInstall").hidden = !BL.canInstall(); };
-      BL.on("installable", () => ($("#mInstall").hidden = false));
+      $("#mInstall").onclick = () => BL.installApp();
       $("#mSave").onclick = (e) => {
         const nid = $("#mNid").value.trim();
         if (nid && !/^\d{6,10}$/.test(nid)) return BL.toast("Check your ID number.", "err");
