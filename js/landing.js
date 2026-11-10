@@ -33,6 +33,7 @@
     show(sec) {
       BL.$("#landPass", sec).textContent = BL.money(BL.cfg.pass_price);
       BL.$$(".install-hero", sec).forEach((b) => (b.hidden = !BL.canInstall()));
+      BL.deck.mount(BL.$("#lDeck", sec));
     },
   };
 })();

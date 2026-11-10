@@ -133,6 +133,7 @@
       if (!(await myRider())) return BL.toast("Rider profile missing. Contact BodaLink.", "err");
       await BL.api.refresh();
       paintStatus(); await loadJobs();
+      BL.deck.mount(BL.$("#rDeck", sec));
       unsubs = [BL.realtime.on("requests/*", () => soon(loadJobs)), BL.realtime.on("bids/*", () => soon(loadJobs)),
         BL.realtime.on("riders/*", (ev) => { if (ev.record.id === rider.id) { rider = ev.record; paintStatus(); paintJobs(); } })];
       clearInterval(ticker); clearInterval(beat);

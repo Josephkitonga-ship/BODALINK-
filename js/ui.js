@@ -127,6 +127,20 @@
   BL.mapsRoute = (from, to) => "https://www.google.com/maps/dir/?api=1&travelmode=driving" + (from ? "&origin=" + spot(from.text, from.lat, from.lng) : "") + "&destination=" + spot(to.text, to.lat, to.lng);
   BL.mapsPlace = (text, lat, lng) => "https://www.google.com/maps/search/?api=1&query=" + spot(text, lat, lng);
 
+  // Shrink a photo before upload to save the rider's and admin's data
+  BL.shrink = (file, max) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, (max || 1600) / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not read that photo."))), "image/jpeg", 0.82);
+    };
+    img.onerror = () => reject(new Error("Could not read that photo."));
+    img.src = URL.createObjectURL(file);
+  });
+
   // Reveal on scroll
   BL.reveal = (root) => {
     const items = BL.$$(".rv:not(.in)", root);

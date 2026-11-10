@@ -98,9 +98,54 @@
       <div class="row" style="margin-top:16px"><input class="input grow" id="nsName" placeholder="New place, e.g. Kimana Market"><button class="btn btn--dark" id="nsAdd">Add</button></div>`);
   }
 
+  async function ads() {
+    const list = await BL.api.list("adverts", { sort: "sort,-created", perPage: 50 });
+    sec._ads = list;
+    BL.html(body(), BL.h`<div class="row between"><div><h3>Advert deck</h3><p class="hint">The rotating banners on the home page. Active adverts show in order.</p></div><button class="btn btn--green btn--sm" data-adnew>Add advert</button></div>
+      ${list.length ? list.map((a) => BL.h`<div class="item"><span class="swatch swatch--${a.theme || "forest"}">${a.image ? BL.h`<img src="${BL.api.fileUrl(a, "image")}" alt="">` : ""}</span>
+        <button class="grow" data-adedit="${a.id}" style="text-align:left"><div class="t">${a.title}</div><div class="s">${a.cta_text ? "Button: " + a.cta_text : "No button"}, order ${a.sort || 0}</div></button>
+        <button class="switch" role="switch" aria-checked="${a.active}" aria-label="${a.title} active" data-adon="${a.id}" data-on="${a.active}"></button></div>`)
+        : BL.h`<div class="empty">No adverts yet. The home page shows the built-in banners until you add one.</div>`}`);
+  }
+
+  function adSheet(ad) {
+    const f = ad || { theme: "forest", sort: (sec._ads || []).length + 1, active: true };
+    BL.sheet(BL.h`<form class="stack" id="adForm" novalidate><h3>${ad ? "Edit advert" : "New advert"}</h3>
+      <div class="field"><label for="adT">Headline</label><input class="input" id="adT" maxlength="80" value="${f.title || ""}"></div>
+      <div class="field"><label for="adS">Short text</label><input class="input" id="adS" maxlength="200" value="${f.subtitle || ""}"></div>
+      <div class="field"><label for="adC">Button text (optional)</label><input class="input" id="adC" maxlength="30" value="${f.cta_text || ""}"></div>
+      <div class="field"><label for="adL">Button link</label><input class="input" id="adL" value="${f.cta_link || ""}" placeholder="#/auth?mode=register&role=rider">
+        <span class="hint">Use a page like #/auth?mode=register&role=rider, the word install for the install button, or a full https:// link.</span></div>
+      <div class="field"><label for="adTh">Colour</label><select class="select" id="adTh">${["forest", "ink", "amber"].map((t) => BL.h`<option value="${t}" ${t === f.theme ? BL.raw("selected") : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`)}</select></div>
+      <div class="field"><label for="adO">Order (1 shows first)</label><input class="input" id="adO" inputmode="numeric" value="${f.sort || 1}"></div>
+      <div class="field"><span class="label">Picture (optional). Wide works best, about 1200 by 650. To show a finished banner picture on its own, leave the short text and button empty</span><label class="file" id="adFile"><input type="file" accept="image/*"><span>${f.image ? "Picture saved. Tap to replace" : "Tap to choose a picture"}</span></label></div>
+      <div class="row between"><span>Show on the home page</span><button type="button" class="switch" id="adOn" role="switch" aria-checked="${!!f.active}"></button></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Save advert</button>
+      ${ad ? BL.h`<button class="btn btn--danger btn--block" type="button" id="adDel">Delete advert</button>` : ""}</form>`, (s, close) => {
+      let on = !!f.active, file = null;
+      BL.$("#adOn", s).onclick = (e) => { on = !on; e.currentTarget.setAttribute("aria-checked", on); };
+      BL.$("#adFile input", s).onchange = (e) => { file = e.target.files[0] || null; if (file) BL.$("#adFile span", s).textContent = file.name; };
+      BL.$("#adForm", s).onsubmit = (e) => {
+        e.preventDefault();
+        const t = BL.$("#adT", s).value.trim();
+        if (t.length < 2) return BL.toast("Enter a headline.", "err");
+        BL.busy(e.submitter, async () => {
+          const fd = new FormData();
+          fd.append("title", t); fd.append("subtitle", BL.$("#adS", s).value.trim()); fd.append("cta_text", BL.$("#adC", s).value.trim());
+          fd.append("cta_link", BL.$("#adL", s).value.trim()); fd.append("theme", BL.$("#adTh", s).value);
+          fd.append("sort", parseInt(BL.$("#adO", s).value, 10) || 1); fd.append("active", on);
+          if (file) fd.append("image", await BL.shrink(file, 1000), "advert.jpg");
+          await BL.api.req(ad ? "PATCH" : "POST", "/api/collections/adverts/records" + (ad ? "/" + ad.id : ""), fd);
+          BL.toast("Advert saved.", "ok"); close(); render();
+        });
+      };
+      if (ad) BL.$("#adDel", s).onclick = async () => { if (await BL.confirm("Delete this advert?", "It disappears from the home page.", "Delete")) { await BL.api.req("DELETE", "/api/collections/adverts/records/" + ad.id); close(); render(); } };
+    });
+  }
+
   async function render() {
     BL.$$("#aTabs [data-t]", sec).forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === tab));
-    try { await { over, riders, pass, money, rates }[tab](); } catch (e) { BL.toast(e.message, "err"); }
+    try { await { over, riders, pass, money, ads, rates }[tab](); } catch (e) { BL.toast(e.message, "err"); }
   }
 
   BL.views.admin = {
@@ -116,6 +161,9 @@
         if (set) { const c = sec._settings.find((x) => x.key === set.dataset.set); await BL.api.update("settings", c.id, { value: Math.max(10, c.value + +set.dataset.d) }); await BL.api.loadConfig(); return render(); }
         const fd = e.target.closest("[data-freeday]");
         if (fd) { const c = sec._settings.find((x) => x.key === "free_first_day"); await BL.api.update("settings", c.id, { value: fd.dataset.on === "true" ? 0 : 1 }); return render(); }
+        if (e.target.closest("[data-adnew]")) return adSheet(null);
+        const ae = e.target.closest("[data-adedit]"); if (ae) return adSheet(sec._ads.find((x) => x.id === ae.dataset.adedit));
+        const ao = e.target.closest("[data-adon]"); if (ao) { await BL.api.update("adverts", ao.dataset.adon, { active: ao.dataset.on !== "true" }); return render(); }
         const del = e.target.closest("[data-delplace]");
         if (del) { await BL.api.req("DELETE", "/api/collections/stages/records/" + del.dataset.delplace); await BL.loadPlaces(); return render(); }
         if (e.target.closest("#nsAdd")) {

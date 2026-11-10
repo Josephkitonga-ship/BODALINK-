@@ -58,6 +58,7 @@
       const me = BL.api.me, $ = (s) => BL.$(s, sec);
       $("#bHello").textContent = "Hi " + me.name.split(" ")[0];
       $("#bNudge").hidden = !!(me.id_verified || me.national_id);
+      BL.deck.mount($("#bDeck"));
       let d = null;
       try { d = JSON.parse(localStorage.getItem("bl.draft") || "null"); } catch (_) {}
       if (d) {

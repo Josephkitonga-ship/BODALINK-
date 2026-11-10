@@ -66,7 +66,7 @@
     const authed = BL.api.authed;
     const landing = r.v === "landing" && !authed;
     document.body.classList.toggle("public", !authed || r.v === "landing" || r.v === "auth");
-    BL.$("#topbar").classList.toggle("on-hero", landing);
+    BL.$("#topbar").classList.remove("on-hero");
     BL.$("#navlinks").hidden = authed;
     const tb = BL.$("#tabbar");
     const tabs = authed && r.v !== "landing" ? TABS[BL.api.role] || [] : [];
