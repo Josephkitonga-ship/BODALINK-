@@ -1,0 +1,41 @@
+<div class="page stack-lg">
+  <div id="bDeck"></div>
+  <div><p class="muted" id="bHello"></p><h2>Where to?</h2></div>
+  <div class="card card--green" id="bNudge" hidden>
+    <b>Add your ID for a verified badge</b>
+    <p class="small" style="margin:4px 0 10px">Riders trust verified passengers, and it helps if anything goes wrong on a trip.</p>
+    <a class="btn btn--dark btn--sm" href="#/me">Verify now</a>
+  </div>
+  <div class="card stack">
+    <div class="seg" id="bTabs" role="group" aria-label="What do you need?">
+      <button data-k="ride" aria-pressed="true">Book a ride</button>
+      <button data-k="parcel" aria-pressed="false">Send a parcel</button>
+    </div>
+    <form class="stack" id="bRide" novalidate>
+      <div class="field"><label for="bFrom">From</label><input class="input" id="bFrom" list="places" placeholder="Where should the rider pick you up?" autocomplete="off">
+        <button type="button" class="locate" data-locate="bFrom">Use my current location</button></div>
+      <div class="field"><label for="bDest">To</label><input class="input" id="bDest" list="places" placeholder="Where are you going?" autocomplete="off"></div>
+      <p class="est" id="bEst" hidden></p>
+      <div class="field"><label for="bMax">Most I will pay (optional)</label><input class="input" id="bMax" inputmode="numeric" placeholder="KSh 150"></div>
+      <div class="row between"><span id="bAutoL">Take the first bid at or under my price</span><button type="button" class="switch" data-auto="ride" role="switch" aria-checked="false" aria-labelledby="bAutoL"></button></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Request bids</button>
+    </form>
+    <form class="stack" id="bParcel" hidden novalidate>
+      <div class="field"><label for="bPFrom">Pick up from</label><input class="input" id="bPFrom" list="places" placeholder="Shop, home or any place" autocomplete="off">
+        <button type="button" class="locate" data-locate="bPFrom">Use my current location</button></div>
+      <div class="field"><label for="bPNote">Extra pickup details (optional)</label><input class="input" id="bPNote" placeholder="Hardware shop behind the market" autocomplete="off"></div>
+      <div class="field"><label for="bDrop">Deliver to</label><input class="input" id="bDrop" list="places" placeholder="Where is it going?" autocomplete="off"></div>
+      <div class="field"><label for="bItem">What are you sending?</label><input class="input" id="bItem" placeholder="Box of spare parts" autocomplete="off"></div>
+      <div class="chips" id="bWeights" role="group" aria-label="Parcel size"></div>
+      <p class="est" id="bPEst" hidden></p>
+      <div class="field"><label for="bRName">Recipient name</label><input class="input" id="bRName" autocomplete="off"></div>
+      <div class="field"><label for="bRPhone">Recipient phone</label><input class="input" id="bRPhone" type="tel" inputmode="tel" placeholder="0712 345 678"></div>
+      <div class="field"><span class="label">Who pays the rider?</span>
+        <div class="chips" id="bPayer" role="group" aria-label="Who pays"><button type="button" class="chip" data-payer="sender" aria-pressed="true">I pay at pickup</button><button type="button" class="chip" data-payer="recipient" aria-pressed="false">Recipient pays on delivery</button></div></div>
+      <div class="field"><label for="bPMax">Most I will pay (optional)</label><input class="input" id="bPMax" inputmode="numeric" placeholder="KSh 200"></div>
+      <div class="row between"><span id="bPAutoL">Take the first bid at or under my price</span><button type="button" class="switch" data-auto="parcel" role="switch" aria-checked="false" aria-labelledby="bPAutoL"></button></div>
+      <button class="btn btn--amber btn--lg btn--block" type="submit">Request bids</button>
+    </form>
+  </div>
+  <div id="bDir"></div>
+</div>

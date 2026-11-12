@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#34D186">
+<meta name="description" content="BodaLink: on-demand boda rides and instant parcel delivery from anywhere in Kimana and Oloitokitok.">
+<title>BodaLink</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screens.css">
+</head>
+<body class="public">
+<!-- Logo: a b made of a frame and a wheel, in front of a chain link. b is for Boda, the link is the Link. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <mask id="ml" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><circle cx="30" cy="40" r="11" fill="none" stroke="#000" stroke-width="12"/><rect x="8" y="8" width="10" height="48" rx="5" fill="#000"/></mask>
+  <g id="mg">
+    <rect x="38" y="9" width="20" height="46" rx="10" stroke-width="6" mask="url(#ml)" style="fill:none;stroke:var(--c2)"/>
+    <rect x="8" y="8" width="10" height="48" rx="5" style="fill:var(--c1)"/>
+    <circle cx="30" cy="40" r="11" stroke-width="7" style="fill:none;stroke:var(--c1)"/>
+  </g>
+  <symbol id="mark" viewBox="5 5 58 54"><use href="#mg"/></symbol>
+</defs></svg>
+
+<div class="app" id="app">
+  <header class="topbar" id="topbar">
+    <a class="logo" href="#/" aria-label="BodaLink home"><svg class="mk" viewBox="5 5 58 54" aria-hidden="true"><use href="#mark"/></svg>BodaLink</a>
+    <nav class="navlinks" id="navlinks" aria-label="Site">
+      <a href="#/auth?mode=register&role=passenger&next=/book">Book a ride</a>
+      <a href="#/auth?mode=register&role=passenger&next=/book&kind=parcel">Send a parcel</a>
+      <a href="#/auth?mode=register&role=rider">Ride with us</a>
+    </nav>
+    <div class="row" id="topright"></div>
+  </header>
+  <main id="views"></main>
+  <nav class="tabbar" id="tabbar" aria-label="Main" hidden></nav>
+</div>
+<datalist id="places"></datalist>
+<div id="toasts" aria-live="polite"></div>
+<div id="sheet-root"></div>
+
+<script src="js/server.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/router.js"></script>
+<script src="js/deck.js"></script>
+<script src="js/directory.js"></script>
+<script src="js/gateway.js"></script>
+<script src="js/landing.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

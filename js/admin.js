@@ -1,0 +1,192 @@
+/* Admin: approve riders, watch dispatch, give free pass time, set day pass price and fare guides. */
+(function () {
+  const BL = (window.BL = window.BL || {});
+  let sec, tab = "over", filter = "pending", unsub = null, pending = null;
+  const body = () => BL.$("#aBody", sec);
+  const badge = (s) => BL.h`<span class="badge badge--${{ approved: "ok", pending: "warn", rejected: "err", suspended: "err" }[s] || ""}">${s}</span>`;
+
+  async function over() {
+    const [online, pend, active, today] = await Promise.all([
+      BL.api.count("riders", "online = true"), BL.api.count("members", 'role = "rider" && status = "pending"'),
+      BL.api.count("requests", 'status = "bidding" || status = "open" || status = "assigned" || status = "picked"'),
+      BL.api.count("requests", 'created >= "' + new Date(new Date().setHours(0, 0, 0, 0)).toISOString().replace("T", " ") + '"'),
+    ]);
+    const dayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString().replace("T", " ");
+    const paid = await BL.api.list("ledger", { filter: 'kind = "pass" && created >= "' + dayStart + '"', perPage: 200 });
+    const income = paid.reduce((a, l) => a + l.amount, 0);
+    const live = await BL.api.list("requests", { filter: 'status = "bidding" || status = "open" || status = "assigned" || status = "picked"', sort: "-created", perPage: 20 });
+    const stat = (n, l, go) => BL.h`<${BL.raw(go ? "a" : "div")} class="card card--flat grow" ${BL.raw(go ? 'href="' + go + '"' : "")} style="text-decoration:none"><b class="money" style="font-size:30px">${n}</b><p class="muted small">${l}</p></${BL.raw(go ? "a" : "div")}>`;
+    BL.html(body(), BL.h`<div class="row wrap" style="gap:12px">${stat(online, "Riders online")}${stat(active, "Trips in progress")}${stat(today, "Requests today")}${stat(BL.money(income), "Pass income today")}
+      <button class="card card--flat grow" data-go="riders" style="text-align:left"><b class="money" style="font-size:30px">${pend}</b><p class="muted small">Riders to review</p></button></div>
+      <h3 style="margin:22px 0 4px">Dispatch monitor</h3>
+      ${live.length ? live.map((r) => BL.h`<div class="item"><span class="badge ${r.kind === "parcel" ? "badge--parcel" : "badge--ok"}">${r.kind === "parcel" ? "Parcel" : "Ride"}</span>
+        <div class="grow"><div class="t">${r.pickup} to ${r.dropoff}</div><div class="s">${r.passenger_name}${r.rider_name ? ", rider " + r.rider_name : ""}, ${BL.ago(r.created)}</div></div><span class="badge">${r.status}</span></div>`)
+        : BL.h`<div class="empty">No trips right now.</div>`}`);
+  }
+
+  async function riders() {
+    const f = { pending: 'member.status = "pending"', approved: 'member.status = "approved"', other: 'member.status = "rejected" || member.status = "suspended"', all: "" }[filter];
+    const list = await BL.api.list("riders", { filter: f, expand: "member", sort: "-created", perPage: 60 });
+    BL.html(body(), BL.h`<div class="chips" style="margin-bottom:8px">${["pending", "approved", "other", "all"].map((k) => BL.h`<button class="chip" data-filter="${k}" aria-pressed="${k === filter}">${k[0].toUpperCase() + k.slice(1)}</button>`)}</div>
+      ${list.length ? list.map((r) => { const m = r.expand.member; return BL.h`<button class="item" data-rider="${r.id}" style="width:100%;text-align:left">
+        <div class="avatar">${BL.initials(m.name)}</div><div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--green)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}</div></div>
+        <div style="text-align:right">${badge(m.status)}<div class="s">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass on" : "No pass"}</div></div></button>`; }) : BL.h`<div class="empty">Nobody here.</div>`}`);
+  }
+
+  async function riderSheet(id) {
+    const r = await BL.api.one("riders", id, { expand: "member" }), m = r.expand.member;
+    const tok = await BL.api.fileToken().catch(() => "");
+    const doc = (f, l) => (r[f] ? BL.h`<a href="${BL.api.fileUrl(r, f, tok)}" target="_blank" rel="noopener"><img src="${BL.api.fileUrl(r, f, tok)}" alt="${l}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px"><span class="small muted">${l}</span></a>` : BL.h`<div class="card card--flat empty small">${l} missing</div>`);
+    BL.sheet(BL.h`<div class="stack"><div class="row"><div class="avatar">${BL.initials(m.name)}</div><div class="grow"><h3>${m.name}</h3><p class="muted small">+${m.phone}, ID ${m.national_id}, ${r.plate}</p></div>${badge(m.status)}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${doc("id_photo", "ID")}${doc("selfie", "Selfie")}${doc("bike_photo", "Bike")}</div>
+      <p class="small muted">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass until " + BL.clock(r.pass_until) : "No active pass"}, ${r.jobs_done} jobs, ${BL.stars(r.rating)}. Emergency contact: ${m.emergency_name || "none"} ${m.emergency_phone ? "+" + m.emergency_phone : ""}</p>
+      <div class="row between"><div><b>Helmet badge</b><div class="small muted">${r.helmet ? "Rider says they give passengers a helmet" : "Rider has not said they give a helmet"}</div></div><button class="switch" id="xHel" role="switch" aria-checked="${!!r.helmet_verified}" aria-label="Helmet verified"></button></div>
+      <div class="field"><label for="xReason">Reason (shown to the rider if you reject)</label><input class="input" id="xReason" value="${m.reject_reason || ""}"></div>
+      <div class="row wrap">${m.status !== "approved" ? BL.h`<button class="btn btn--green grow" data-s="approved">Approve</button>` : BL.h`<button class="btn btn--danger grow" data-s="suspended">Suspend</button>`}
+        ${m.status === "pending" || m.status === "approved" ? BL.h`<button class="btn btn--soft grow" data-s="rejected">Reject</button>` : ""}</div>
+      <div class="row"><input class="input grow" id="xAmt" inputmode="numeric" placeholder="Give free hours, e.g. 24"><button class="btn btn--dark" id="xAdj">Give</button></div></div>`, (s, close) => {
+      BL.$("#xHel", s).onclick = async (e) => { try { await BL.api.update("riders", r.id, { helmet_verified: !r.helmet_verified }); r.helmet_verified = !r.helmet_verified; e.currentTarget.setAttribute("aria-checked", r.helmet_verified); } catch (er) { BL.toast(er.message, "err"); } };
+      BL.$$("[data-s]", s).forEach((b) => (b.onclick = () => BL.busy(b, async () => {
+        const status = b.dataset.s, reason = BL.$("#xReason", s).value.trim();
+        if (status === "rejected" && !reason) throw new Error("Tell the rider what to fix.");
+        await BL.api.update("members", m.id, { status, reject_reason: status === "approved" ? "" : reason });
+        BL.toast("Updated.", "ok"); close(); render();
+      })));
+      BL.$("#xAdj", s).onclick = (e) => BL.busy(e.currentTarget, async () => {
+        const hours = parseInt(BL.$("#xAmt", s).value, 10);
+        if (!(hours >= 1 && hours <= 168)) throw new Error("Enter 1 to 168 hours.");
+        const res = await BL.api.post("/api/bl/admin/grant", { rider: r.id, hours, note: "Free time from BodaLink" });
+        BL.toast("Pass runs until " + BL.clock(res.pass_until), "ok"); close(); render();
+      });
+    });
+  }
+
+  async function pass() {
+    const list = await BL.api.list("members", { filter: 'role = "passenger"', sort: "-created", perPage: 60 });
+    BL.html(body(), list.length ? BL.h`${list.map((m) => BL.h`<button class="item" data-pass="${m.id}" style="width:100%;text-align:left"><div class="avatar">${BL.initials(m.name)}</div>
+      <div class="grow"><div class="t">${m.name}</div><div class="s">+${m.phone}${m.national_id ? ", ID " + m.national_id : ""}</div></div>
+      ${m.id_verified ? BL.raw('<span class="badge badge--ok">ID verified</span>') : m.national_id ? BL.raw('<span class="badge badge--warn">ID to check</span>') : ""}${m.status === "suspended" ? badge("suspended") : ""}</button>`)}` : BL.h`<div class="empty">No passengers yet.</div>`);
+  }
+  async function passSheet(id) {
+    const m = await BL.api.one("members", id);
+    BL.sheet(BL.h`<div class="stack"><h3>${m.name}</h3><p class="muted small">+${m.phone}. National ID ${m.national_id || "not given"}. Emergency contact: ${m.emergency_name || "none"} ${m.emergency_phone ? "+" + m.emergency_phone : ""}</p>
+      <button class="btn btn--green" data-v>${m.id_verified ? "Remove ID verified badge" : "Mark ID as verified"}</button>
+      <button class="btn btn--danger" data-x>${m.status === "suspended" ? "Reinstate account" : "Suspend account"}</button></div>`, (s, close) => {
+      BL.$("[data-v]", s).onclick = (e) => BL.busy(e.currentTarget, async () => { await BL.api.update("members", id, { id_verified: !m.id_verified }); close(); render(); });
+      BL.$("[data-x]", s).onclick = (e) => BL.busy(e.currentTarget, async () => { await BL.api.update("members", id, { status: m.status === "suspended" ? "approved" : "suspended" }); close(); render(); });
+    });
+  }
+
+  async function money() {
+    const led = await BL.api.list("ledger", { sort: "-created", expand: "rider.member", perPage: 50 });
+    const who = (r) => (r.expand && r.expand.rider && r.expand.rider.expand ? r.expand.rider.expand.member.name : "Rider");
+    const names = { pass: "Day pass", free_pass: "Free first day", admin_pass: "Free time given" };
+    const total = led.filter((l) => l.kind === "pass").reduce((a, l) => a + l.amount, 0);
+    BL.html(body(), BL.h`<div class="card card--flat"><p class="muted small">Day pass income, last 50 entries</p><b class="money" style="font-size:30px">${BL.money(total)}</b></div>
+      <h3 style="margin-top:22px">Day pass history</h3>${led.length ? led.map((l) => BL.h`<div class="item"><div class="grow"><div class="t">${who(l)}, ${names[l.kind] || l.kind}</div><div class="s">${l.note}, ${BL.ago(l.created)}, until ${BL.clock(l.valid_until)}</div></div>
+      <b class="money">${l.amount ? BL.money(l.amount) : "Free"}</b></div>`) : BL.h`<div class="empty">No passes yet.</div>`}`);
+  }
+
+  async function rates() {
+    const [places, cfg] = await Promise.all([BL.api.list("stages", { sort: "name" }), BL.api.list("settings")]);
+    sec._settings = cfg;
+    const num = (k) => (cfg.find((c) => c.key === k) || { value: 0 }).value;
+    const price = (cfg.find((c) => c.key === "pass_price") || { value: 100 }).value;
+    const free = (cfg.find((c) => c.key === "free_first_day") || { value: 1 }).value;
+    BL.html(body(), BL.h`<h3>Day pass</h3><p class="hint">What a rider pays for 24 hours online. Riders set their own prices and keep all of their fares.</p>
+      <div class="item"><div class="grow t">Price</div><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="-10" aria-label="Lower pass price">-</button><b class="money" style="min-width:72px;text-align:center">${BL.money(price)}</b><button class="btn btn--soft btn--sm" data-set="pass_price" data-d="10" aria-label="Raise pass price">+</button></div>
+      <div class="item"><div class="grow"><div class="t">Free first day for new riders</div><div class="s">Given when you approve a rider</div></div><button class="switch" role="switch" aria-checked="${!!free}" aria-label="Free first day" data-freeday data-on="${!!free}"></button></div>
+      <h3 style="margin-top:24px">Fare estimates</h3><p class="hint">Off by default because riders set their own prices. When on, passengers see "Typical fare" worked out as base rate, plus the zone add-on, plus a parcel size surcharge.</p>
+      <div class="item"><div class="grow t">Show fare estimates</div><button class="switch" role="switch" aria-checked="${!!num("fare_estimates")}" aria-label="Show fare estimates" data-fest data-on="${!!num("fare_estimates")}"></button></div>
+      ${[["fare_base", "Base rate"], ["fare_medium", "Medium parcel surcharge"], ["fare_large", "Large parcel surcharge"]].map(([k, l]) => BL.h`<div class="item"><div class="grow t">${l}</div><button class="btn btn--soft btn--sm" data-set="${k}" data-d="-10" aria-label="Lower ${l}">-</button><b class="money" style="min-width:72px;text-align:center">${BL.money(num(k))}</b><button class="btn btn--soft btn--sm" data-set="${k}" data-d="10" aria-label="Raise ${l}">+</button></div>`)}
+      <h3 style="margin-top:24px">Place suggestions and zones</h3><p class="hint">Popular places appear as suggestions when a passenger types From or To. A place's zone add-on is added to the estimate when a trip ends there.</p>
+      ${places.map((s) => BL.h`<div class="item"><div class="grow"><div class="t">${s.name}</div><div class="s">Zone add-on ${BL.money(s.base_fare || 0)}</div></div><button class="btn btn--soft btn--sm" data-zone="${s.id}" data-d="-10" data-v="${s.base_fare || 0}" aria-label="Lower ${s.name} add-on">-</button><button class="btn btn--soft btn--sm" data-zone="${s.id}" data-d="10" data-v="${s.base_fare || 0}" aria-label="Raise ${s.name} add-on">+</button><button class="btn btn--danger btn--sm" data-delplace="${s.id}" aria-label="Remove ${s.name}">Remove</button></div>`)}
+      <div class="row" style="margin-top:16px"><input class="input grow" id="nsName" placeholder="New place, e.g. Kimana Market"><button class="btn btn--dark" id="nsAdd">Add</button></div>`);
+  }
+
+  async function ads() {
+    const list = await BL.api.list("adverts", { sort: "sort,-created", perPage: 50 });
+    sec._ads = list;
+    BL.html(body(), BL.h`<div class="row between"><div><h3>Advert deck</h3><p class="hint">The rotating banners on the home page. Active adverts show in order.</p></div><button class="btn btn--green btn--sm" data-adnew>Add advert</button></div>
+      ${list.length ? list.map((a) => BL.h`<div class="item"><span class="swatch swatch--${a.theme || "forest"}">${a.image ? BL.h`<img src="${BL.api.fileUrl(a, "image")}" alt="">` : ""}</span>
+        <button class="grow" data-adedit="${a.id}" style="text-align:left"><div class="t">${a.title}</div><div class="s">${a.cta_text ? "Button: " + a.cta_text : "No button"}, order ${a.sort || 0}</div></button>
+        <button class="switch" role="switch" aria-checked="${a.active}" aria-label="${a.title} active" data-adon="${a.id}" data-on="${a.active}"></button></div>`)
+        : BL.h`<div class="empty">No adverts yet. The home page shows the built-in banners until you add one.</div>`}`);
+  }
+
+  function adSheet(ad) {
+    const f = ad || { theme: "forest", sort: (sec._ads || []).length + 1, active: true };
+    BL.sheet(BL.h`<form class="stack" id="adForm" novalidate><h3>${ad ? "Edit advert" : "New advert"}</h3>
+      <div class="field"><label for="adT">Headline</label><input class="input" id="adT" maxlength="80" value="${f.title || ""}"></div>
+      <div class="field"><label for="adS">Short text</label><input class="input" id="adS" maxlength="200" value="${f.subtitle || ""}"></div>
+      <div class="field"><label for="adC">Button text (optional)</label><input class="input" id="adC" maxlength="30" value="${f.cta_text || ""}"></div>
+      <div class="field"><label for="adL">Button link</label><input class="input" id="adL" value="${f.cta_link || ""}" placeholder="#/auth?mode=register&role=rider">
+        <span class="hint">Use a page like #/auth?mode=register&role=rider, the word install for the install button, or a full https:// link.</span></div>
+      <div class="field"><label for="adTh">Colour</label><select class="select" id="adTh">${["forest", "ink", "amber"].map((t) => BL.h`<option value="${t}" ${t === f.theme ? BL.raw("selected") : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`)}</select></div>
+      <div class="field"><label for="adO">Order (1 shows first)</label><input class="input" id="adO" inputmode="numeric" value="${f.sort || 1}"></div>
+      <div class="field"><span class="label">Picture (optional). Wide works best, about 1200 by 650. To show a finished banner picture on its own, leave the short text and button empty</span><label class="file" id="adFile"><input type="file" accept="image/*"><span>${f.image ? "Picture saved. Tap to replace" : "Tap to choose a picture"}</span></label></div>
+      <div class="row between"><span>Show on the home page</span><button type="button" class="switch" id="adOn" role="switch" aria-checked="${!!f.active}"></button></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Save advert</button>
+      ${ad ? BL.h`<button class="btn btn--danger btn--block" type="button" id="adDel">Delete advert</button>` : ""}</form>`, (s, close) => {
+      let on = !!f.active, file = null;
+      BL.$("#adOn", s).onclick = (e) => { on = !on; e.currentTarget.setAttribute("aria-checked", on); };
+      BL.$("#adFile input", s).onchange = (e) => { file = e.target.files[0] || null; if (file) BL.$("#adFile span", s).textContent = file.name; };
+      BL.$("#adForm", s).onsubmit = (e) => {
+        e.preventDefault();
+        const t = BL.$("#adT", s).value.trim();
+        if (t.length < 2) return BL.toast("Enter a headline.", "err");
+        BL.busy(e.submitter, async () => {
+          const fd = new FormData();
+          fd.append("title", t); fd.append("subtitle", BL.$("#adS", s).value.trim()); fd.append("cta_text", BL.$("#adC", s).value.trim());
+          fd.append("cta_link", BL.$("#adL", s).value.trim()); fd.append("theme", BL.$("#adTh", s).value);
+          fd.append("sort", parseInt(BL.$("#adO", s).value, 10) || 1); fd.append("active", on);
+          if (file) fd.append("image", await BL.shrink(file, 1000), "advert.jpg");
+          await BL.api.req(ad ? "PATCH" : "POST", "/api/collections/adverts/records" + (ad ? "/" + ad.id : ""), fd);
+          BL.toast("Advert saved.", "ok"); close(); render();
+        });
+      };
+      if (ad) BL.$("#adDel", s).onclick = async () => { if (await BL.confirm("Delete this advert?", "It disappears from the home page.", "Delete")) { await BL.api.req("DELETE", "/api/collections/adverts/records/" + ad.id); close(); render(); } };
+    });
+  }
+
+  async function render() {
+    BL.$$("#aTabs [data-t]", sec).forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === tab));
+    try { await { over, riders, pass, money, ads, rates }[tab](); } catch (e) { BL.toast(e.message, "err"); }
+  }
+
+  BL.views.admin = {
+    mount(s) {
+      sec = s;
+      s.addEventListener("click", async (e) => {
+        const t = e.target.closest("[data-t]"); if (t) { tab = t.dataset.t; return render(); }
+        const g = e.target.closest("[data-go]"); if (g) { tab = g.dataset.go; filter = "pending"; return render(); }
+        const f = e.target.closest("[data-filter]"); if (f) { filter = f.dataset.filter; return render(); }
+        const r = e.target.closest("[data-rider]"); if (r) return riderSheet(r.dataset.rider);
+        const p = e.target.closest("[data-pass]"); if (p) return passSheet(p.dataset.pass);
+        const set = e.target.closest("[data-set]");
+        if (set) { const c = sec._settings.find((x) => x.key === set.dataset.set); await BL.api.update("settings", c.id, { value: Math.max(10, c.value + +set.dataset.d) }); await BL.api.loadConfig(); return render(); }
+        const zn = e.target.closest("[data-zone]");
+        if (zn) { await BL.api.update("stages", zn.dataset.zone, { base_fare: Math.max(0, +zn.dataset.v + +zn.dataset.d) }); await BL.loadPlaces(); return render(); }
+        const fe = e.target.closest("[data-fest]");
+        if (fe) { const c = sec._settings.find((x) => x.key === "fare_estimates"); await BL.api.update("settings", c.id, { value: fe.dataset.on === "true" ? 0 : 1 }); await BL.api.loadConfig(); return render(); }
+        const fd = e.target.closest("[data-freeday]");
+        if (fd) { const c = sec._settings.find((x) => x.key === "free_first_day"); await BL.api.update("settings", c.id, { value: fd.dataset.on === "true" ? 0 : 1 }); return render(); }
+        if (e.target.closest("[data-adnew]")) return adSheet(null);
+        const ae = e.target.closest("[data-adedit]"); if (ae) return adSheet(sec._ads.find((x) => x.id === ae.dataset.adedit));
+        const ao = e.target.closest("[data-adon]"); if (ao) { await BL.api.update("adverts", ao.dataset.adon, { active: ao.dataset.on !== "true" }); return render(); }
+        const del = e.target.closest("[data-delplace]");
+        if (del) { await BL.api.req("DELETE", "/api/collections/stages/records/" + del.dataset.delplace); await BL.loadPlaces(); return render(); }
+        if (e.target.closest("#nsAdd")) {
+          const name = BL.$("#nsName", sec).value.trim();
+          if (name.length < 2) return BL.toast("Enter a place name.", "err");
+          try { await BL.api.create("stages", { name, base_fare: 0, active: true }); await BL.loadPlaces(); render(); } catch (er) { BL.toast(er.message, "err"); }
+        }
+      });
+    },
+    show() {
+      render();
+      unsub = BL.realtime.on("requests/*", () => { clearTimeout(pending); pending = setTimeout(() => tab === "over" && render(), 400); });
+    },
+    hide() { if (unsub) unsub(); },
+  };
+})();
