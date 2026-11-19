@@ -1,0 +1,25 @@
+/* BodaLink design tokens: "Savanna sun". Warm amber for the main action, forest green for trust and success.
+   Amber means go (book, bid, accept). Forest marks success, online riders and parcels. */
+:root{
+  --brand:#FFB020; --brand-600:#E08F00; --brand-100:#FFF4DB; --on-brand:#16241D;
+  --forest:#0E6B47; --forest-100:#E0F2E9; --forest-text:#0E6B47;
+  --red:#D64545; --red-100:#FCEBEB;
+  --ink:#16241D; --ink-2:#34463C; --muted:#5F6F66; --line:#E4EBE6;
+  --bg:#FFFFFF; --surface:#F6F8F4; --surface-2:#EAEFE8;
+  --r-sm:10px; --r-md:16px; --r-lg:24px; --r-pill:999px;
+  --sh-1:0 1px 2px rgba(22,36,29,.06),0 6px 20px rgba(22,36,29,.07);
+  --sh-up:0 -10px 40px rgba(22,36,29,.14);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --top-h:60px; --nav-h:68px;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --c1:#16241D; --c2:#0E6B47;   /* logo: the b and the link */
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#F2F6F1; --ink-2:#D3DDD6; --muted:#98A89F; --line:#27352D;
+    --bg:#0E1612; --surface:#16211B; --surface-2:#1F2D25;
+    --brand-100:#3B2A06; --forest:#2BA374; --forest-100:#12301F; --forest-text:#5BD39B; --red-100:#3A1618;
+    --sh-1:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+    --c1:#F2F6F1; --c2:#3DBE86;
+  }
+}

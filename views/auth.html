@@ -1,0 +1,65 @@
+<div class="page page--auth">
+  <aside class="authside" aria-hidden="true">
+    <p class="eyebrow">Kimana and Oloitokitok</p>
+    <h2>Rides and parcels, dispatched in seconds.</h2>
+    <ul>
+      <li>Riders near you bid, and you pick the price.</li>
+      <li>Every rider is ID and bike checked.</li>
+      <li>Parcels use a pickup code, so the right person collects.</li>
+    </ul>
+  </aside>
+  <div class="card stack">
+    <div class="seg" id="aTabs" role="group" aria-label="Account">
+      <button data-m="login" aria-pressed="true">Sign in</button>
+      <button data-m="register" aria-pressed="false">Create account</button>
+    </div>
+
+    <form id="fLogin" class="stack" novalidate>
+      <div class="field"><label for="lEmail">Email</label><input class="input" id="lEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" placeholder="you@example.com"></div>
+      <div class="field"><label for="lPw">Password</label><input class="input" id="lPw" type="password" autocomplete="current-password"></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Sign in</button>
+      <button class="btn btn--soft btn--block" type="button" id="toReset">Forgot your password?</button>
+    </form>
+
+    <form id="fReg" class="stack" hidden novalidate>
+      <div class="stack" data-step="1">
+        <h3>How will you use BodaLink?</h3>
+        <button class="btn btn--soft btn--block role" type="button" data-role="passenger"><span><b>I need a ride or a delivery</b><br><small class="muted">Passenger or merchant</small></span></button>
+        <button class="btn btn--soft btn--block role" type="button" data-role="rider"><span><b>I ride a boda</b><br><small class="muted">Rider, ID and bike check required</small></span></button>
+      </div>
+      <div class="stack" data-step="2" hidden>
+        <div class="field"><label for="rName">Full name, as on your ID</label><input class="input" id="rName" autocomplete="name"></div>
+        <div class="field"><label for="rEmail">Email</label><input class="input" id="rEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" placeholder="you@example.com"></div>
+        <div class="field"><label for="rPhone">Phone number (M-Pesa for riders)</label><input class="input" id="rPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712 345 678"></div>
+        <div class="stack" id="rRider" hidden>
+          <div class="field"><label for="rNid">National ID number</label><input class="input" id="rNid" inputmode="numeric" maxlength="10"></div>
+          <div class="field"><label for="rPlate">Motorbike registration</label><input class="input" id="rPlate" autocapitalize="characters" placeholder="KMGH 214T"></div>
+        </div>
+        <div class="stack" id="rPass" hidden>
+          <p class="hint">Optional but recommended: someone we can tell if something goes wrong on a trip.</p>
+          <div class="field"><label for="rEName">Emergency contact name</label><input class="input" id="rEName"></div>
+          <div class="field"><label for="rEPhone">Emergency contact phone</label><input class="input" id="rEPhone" type="tel" inputmode="tel"></div>
+        </div>
+        <div class="field"><label for="rPw">Choose a password (8 or more characters)</label><input class="input" id="rPw" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="rPw2">Repeat your password</label><input class="input" id="rPw2" type="password" autocomplete="new-password"></div>
+        <button class="btn btn--green btn--lg btn--block" type="submit">Create my account</button>
+        <button class="btn btn--soft btn--block" type="button" data-back>Back</button>
+      </div>
+    </form>
+
+    <form id="fReset" class="stack" hidden novalidate>
+      <h3>Reset your password</h3>
+      <p class="hint">Enter the email you signed up with and we will send you a link.</p>
+      <div class="field"><label for="pEmail">Email</label><input class="input" id="pEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none"></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Send reset link</button>
+      <button class="btn btn--soft btn--block" type="button" id="toLogin">Back to sign in</button>
+    </form>
+
+    <form id="fNew" class="stack" hidden novalidate>
+      <h3>Choose a new password</h3>
+      <div class="field"><label for="nPw">New password (8 or more characters)</label><input class="input" id="nPw" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="nPw2">Repeat it</label><input class="input" id="nPw2" type="password" autocomplete="new-password"></div>
+      <button class="btn btn--green btn--lg btn--block" type="submit">Save password</button>
+    </form>
+  </div>
+</div>
