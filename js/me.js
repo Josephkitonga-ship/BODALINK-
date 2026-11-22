@@ -35,6 +35,7 @@
     show(sec) {
       const me = BL.api.me, $ = (s) => BL.$(s, sec);
       $("#mAv").textContent = BL.initials(me.name);
+      if (me.photo) { $("#mAv").setAttribute("data-photo", me.photo); $("#mAv").removeAttribute("data-ph"); }
       $("#mName").textContent = me.name;
       $("#mPhone").textContent = "+" + me.phone + (me.email ? ", " + me.email : "");
       const b = $("#mBadge");

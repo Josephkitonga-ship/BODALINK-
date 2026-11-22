@@ -46,6 +46,7 @@
     return r.data;
   }
 
+  const photoCache = {};
   let me = null;
   async function loadMe() {
     const { data } = await need().auth.getSession();
@@ -125,6 +126,23 @@
       if (error) throw new Error(nice(error));
       return path;
     },
+    // Profile photos are private. A short-lived link is made on demand and reused for a few minutes.
+    async photoUrl(path) {
+      if (!path) return "";
+      const hit = photoCache[path]; if (hit && Date.now() - hit.t < 480000) return hit.url;
+      const { data, error } = await need().storage.from("profile-photos").createSignedUrl(path, 600);
+      if (error) return "";
+      photoCache[path] = { url: data.signedUrl, t: Date.now() };
+      return data.signedUrl;
+    },
+    async uploadPhoto(blob) {
+      const path = me.id + "/photo.jpg";
+      const { error } = await need().storage.from("profile-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) throw new Error(nice(error));
+      await q(need().from("profiles").update({ photo: path }).eq("id", me.id));
+      delete photoCache[path];
+      await loadMe(); BL.emit("auth", me);
+    },
     advertUrl: (path) => (path ? C.SUPABASE_URL + "/storage/v1/object/public/adverts/" + path : ""),
     async uploadAdvert(blob) {
       const path = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + ".jpg";
@@ -135,6 +153,25 @@
   });
 
   if (sb) sb.auth.onAuthStateChange((evt) => { if (evt === "PASSWORD_RECOVERY") BL.recovery = true; if (evt === "SIGNED_OUT" && me) { me = null; BL.emit("auth", null); location.hash = "#/"; } });
+
+  // <div data-photo="path"> shows initials first and swaps in the person's photo once it loads.
+  const GOODPHOTO = /^[0-9a-f-]{36}\/photo\.jpg$/;
+  let hydrating = false;
+  async function hydrate() {
+    if (hydrating) return; hydrating = true;
+    try {
+      for (const el of Array.from(document.querySelectorAll("[data-photo]:not([data-ph])"))) {
+        el.setAttribute("data-ph", "1");
+        const path = el.getAttribute("data-photo"); if (!GOODPHOTO.test(path)) continue;
+        const url = await api.photoUrl(path); if (!url) continue;
+        const img = new Image(); img.alt = "";
+        img.onload = () => { el.textContent = ""; el.appendChild(img); };
+        img.src = url;
+      }
+    } finally { hydrating = false; }
+  }
+  if (typeof MutationObserver !== "undefined") new MutationObserver(() => { clearTimeout(hydrate.t); hydrate.t = setTimeout(hydrate, 60); }).observe(document.documentElement, { childList: true, subtree: true });
+  BL.avatar = (name, path, size) => BL.h`<div class="avatar${size === "lg" ? " avatar--lg" : ""}" ${path && GOODPHOTO.test(path) ? BL.raw('data-photo="' + path + '"') : ""}>${BL.initials(name)}</div>`;
 
   // Live changes. on("requests/*", fn) calls fn({ action: "create" | "update" | "delete", record }) for rows this person may see.
   BL.realtime = {

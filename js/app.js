@@ -57,5 +57,15 @@
     // Keeps bidding windows moving even if nobody else is online to nudge them
     setInterval(() => { if (BL.api.authed && !document.hidden) BL.api.rpc("sweep").catch(() => {}); }, 20000);
   }
-  boot();
+  // Splash screen: stays for at least 3 seconds (change MIN_SPLASH_MS to adjust), then leaves once the first screen is ready
+  const MIN_SPLASH_MS = 3000;
+  const splash = document.getElementById("splash"), t0 = performance.now();
+  function hideSplash() {
+    if (!splash || splash.dataset.done) return;
+    splash.dataset.done = "1";
+    setTimeout(() => { splash.classList.add("out"); setTimeout(() => splash.remove(), 500); }, Math.max(0, MIN_SPLASH_MS - (performance.now() - t0)));
+  }
+  BL.on("viewshown", hideSplash);
+  setTimeout(hideSplash, 9000);   // never trap someone behind it on a very slow connection
+  boot().catch((e) => { console.error(e); hideSplash(); });
 })();

@@ -24,7 +24,7 @@
       const done = (isNew) => {
         BL.toast(isNew ? "Welcome to BodaLink." : "Signed in.", "ok");
         const next = st.next && st.next !== "/auth" ? "#" + st.next : null;
-        location.hash = BL.api.role === "rider" && isNew ? "#/join" : next || BL.home();
+        location.hash = isNew ? "#/photo" : next || BL.home();
       };
 
       BL.$$("#aTabs [data-m]", sec).forEach((b) => (b.onclick = () => { showForm(b.dataset.m); if (b.dataset.m === "register") step(st.role ? 2 : 1); }));

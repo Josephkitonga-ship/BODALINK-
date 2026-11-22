@@ -1,0 +1,23 @@
+<div class="page page--narrow stack-lg">
+  <div>
+    <p class="eyebrow" id="phEye">One last step</p>
+    <h2 id="phTitle">Add your photo</h2>
+    <p class="muted" id="phLead">A clear photo of your face helps riders and passengers recognise each other. It is shown only to the person on your trip and to BodaLink staff.</p>
+  </div>
+  <div class="card stack" style="justify-items:center;text-align:center">
+    <div class="photo-circle" id="phCircle" role="img" aria-label="Your photo preview"><span id="phHint"><b>No photo yet</b><br><small class="muted">Take one or choose one below</small></span></div>
+    <div class="photo-actions">
+      <button type="button" class="btn btn--dark" id="phCamBtn">Take a photo</button>
+      <button type="button" class="btn btn--soft" id="phGalBtn">Choose from gallery</button>
+    </div>
+    <input type="file" accept="image/*" capture="user" id="phCam" hidden>
+    <input type="file" accept="image/*" id="phGal" hidden>
+    <ul class="hint" style="text-align:left;padding-left:18px;display:grid;gap:4px">
+      <li>Face the camera in good light.</li>
+      <li>Take off sunglasses and hats.</li>
+      <li>Only you in the photo.</li>
+    </ul>
+    <button class="btn btn--green btn--lg btn--block" id="phSave" disabled>Save my photo</button>
+  </div>
+  <button class="btn btn--soft" id="phOut" style="justify-self:center">Sign out</button>
+</div>

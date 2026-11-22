@@ -33,7 +33,7 @@ Without this, password reset emails will not reach riders and passengers.
 - **Day passes:** the rider pays by M-Pesa and messages BodaLink; an admin opens the rider in Admin, Riders and taps
   *Record M-Pesa payment*. New riders get a free first day when approved (switch in Admin, Rates).
 - **Bidding, accepting, pickup codes, ratings, expiry:** database functions (`place_bid`, `accept_bid`, `confirm_pickup`, ...).
-- **Rider IDs and selfies:** private storage; admins see them through short-lived links.
+- **Profile photos, rider ID and bike photos:** private storage. Everyone must add a profile photo. A passenger sees the photos of riders who bid, a rider sees a passenger's photo once chosen, and admins see all of them, through short-lived links.
 - **Adverts:** public `adverts` bucket, edited in Admin.
 
 ## Not built yet
@@ -55,3 +55,6 @@ The database trip flow was also tested end to end. What has not been tried is th
 The footer (About BodaLink, Policies and terms, Contact us, and the Flynn Technologies link) shows on the public pages. The three pages are `views/about.html`, `views/terms.html` and `views/contact.html`. Prices on them come from the live settings.
 Delete the old `deck` folder from the GitHub repository. It held the presentation files, which are no longer part of the site.
 The Policies and terms page is a plain-language draft. Have it reviewed before you rely on it, and check whether BodaLink must register with Kenya's Office of the Data Protection Commissioner (odpc.go.ke), since rider ID photos are personal data.
+
+## Profile photos
+Everyone adds a profile photo when they create an account. Accounts that already exist are asked for one the next time they sign in (admins can skip it). Passengers cannot book, and riders cannot bid or be approved, without a photo. The selfie with ID step has been removed.

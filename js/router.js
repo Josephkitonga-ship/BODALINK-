@@ -7,7 +7,7 @@
     "/book": { v: "book", roles: ["passenger"] }, "/trip": { v: "trip", roles: ["passenger"] },
     "/alerts": { v: "alerts", roles: ["passenger", "rider", "admin"] }, "/me": { v: "me", roles: ["passenger", "rider", "admin"] },
     "/rider": { v: "rider", roles: ["rider"] }, "/pass": { v: "pass", roles: ["rider"] }, "/join": { v: "join", roles: ["rider"] },
-    "/admin": { v: "admin", roles: ["admin"] },
+    "/admin": { v: "admin", roles: ["admin"] }, "/photo": { v: "photo", roles: ["passenger", "rider", "admin"] },
   };
   const HOME = { passenger: "#/book", rider: "#/rider", admin: "#/admin" };
   const TABS = {
@@ -25,7 +25,7 @@
 
   // Scripts only some people need load on first visit, which keeps the first load small
   const SCRIPTS = { book: ["js/fareCalculator.js", "js/ticket.js", "js/passenger.js"], trip: ["js/fareCalculator.js", "js/ticket.js", "js/passenger.js"],
-    me: ["js/push.js", "js/me.js"], about: ["js/info.js"], terms: ["js/info.js"], contact: ["js/info.js"], alerts: ["js/alerts.js"], rider: ["js/rider.js"], pass: ["js/rider.js"], join: ["js/rider.js"], admin: ["js/admin.js"] };
+    me: ["js/push.js", "js/me.js"], about: ["js/info.js"], photo: ["js/photo.js"], terms: ["js/info.js"], contact: ["js/info.js"], alerts: ["js/alerts.js"], rider: ["js/rider.js"], pass: ["js/rider.js"], join: ["js/rider.js"], admin: ["js/admin.js"] };
   const loaded = {};
   const needScript = (src) => (loaded[src] = loaded[src] || new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -59,6 +59,8 @@
     if (!r) { location.hash = "#/"; return; }
     if (!r.pub && !BL.api.authed) { location.hash = "#/auth?next=" + encodeURIComponent(path); return; }
     if (r.roles && r.roles.indexOf(BL.api.role) < 0) { location.hash = BL.home(); return; }
+    // everyone adds a profile photo before using the app (admins may skip it)
+    if (BL.api.authed && BL.api.role !== "admin" && !BL.api.me.photo && !r.pub && r.v !== "photo") { location.hash = "#/photo"; return; }
     const token = (current = {});
     const sec = await load(r.v);
     if (token !== current) return;
@@ -71,14 +73,16 @@
     const v = BL.views[r.v];
     if (v && v.show) v.show(sec, params);
     BL.reveal(sec);
+    BL.emit("viewshown", r.v);
     window.scrollTo(0, 0);
-    document.title = ({ landing: "BodaLink", about: "About BodaLink | BodaLink", terms: "Policies and terms | BodaLink", contact: "Contact us | BodaLink" })[r.v] || (r.v[0].toUpperCase() + r.v.slice(1) + " | BodaLink");
+    document.title = ({ landing: "BodaLink", about: "About BodaLink | BodaLink", terms: "Policies and terms | BodaLink", contact: "Contact us | BodaLink", photo: "Your photo | BodaLink" })[r.v] || (r.v[0].toUpperCase() + r.v.slice(1) + " | BodaLink");
   }
 
   function chrome(path, r) {
     const authed = BL.api.authed;
     const landing = r.v === "landing" && !authed;
-    const info = r.v === "about" || r.v === "terms" || r.v === "contact";   // open to everyone, with or without an account
+    const info = r.v === "about" || r.v === "terms" || r.v === "contact" || r.v === "photo";
+    document.body.dataset.view = r.v;   // open to everyone, with or without an account
     document.body.classList.toggle("public", !authed || r.v === "landing" || r.v === "auth" || info);
     BL.$("#topbar").classList.remove("on-hero");
     BL.$("#navlinks").hidden = authed;

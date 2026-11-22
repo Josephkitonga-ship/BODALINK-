@@ -42,7 +42,9 @@
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);font-size:12px;font-weight:700;background:var(--surface);white-space:nowrap}
 .badge--ok{background:var(--forest-100);color:var(--forest-text)} .badge--warn{background:var(--brand-100);color:#8A5A00}
 .badge--err{background:var(--red-100);color:var(--red)} .badge--parcel{background:var(--forest);color:#fff}
-.avatar{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;flex:none}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;flex:none;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar--lg{width:64px;height:64px;font-size:22px}
 .stars{display:flex;gap:2px} .stars button{font-size:30px;line-height:1;color:var(--surface-2);transition:transform .15s,color .15s} .stars button.on{color:var(--brand)} .stars button:active{transform:scale(1.2)}
 .money{font-weight:800;font-variant-numeric:tabular-nums}
 .bar{height:8px;border-radius:4px;background:var(--surface-2);position:relative}
@@ -97,3 +99,12 @@
 .btn{white-space:nowrap} .btn--block{white-space:normal}
 .money{white-space:nowrap}
 .row.wrap>.card--flat.grow{flex:1 1 150px;min-width:0}
+
+/* profile photo step */
+.photo-circle{width:220px;height:220px;border-radius:50%;background:var(--surface) center/cover no-repeat;border:2px dashed var(--line);display:grid;place-items:center;text-align:center;padding:24px;color:var(--ink-2)}
+.photo-circle.has{border-style:solid;border-color:var(--forest)}
+.photo-circle.has>span{display:none}
+body[data-view="photo"] .sitefoot{display:none}
+
+.photo-actions{display:grid;gap:10px;width:100%}
+@media(min-width:520px){.photo-actions{grid-template-columns:1fr 1fr}}

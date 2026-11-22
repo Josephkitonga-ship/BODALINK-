@@ -6,6 +6,21 @@
 <meta name="theme-color" content="#FFB020">
 <meta name="description" content="BodaLink: on-demand boda rides and instant parcel delivery from anywhere in Kimana and Oloitokitok.">
 <title>BodaLink</title>
+<style>
+/* Splash screen: shown until the first screen is ready */
+#splash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#FFB020;color:#16241D;--c1:#16241D;--c2:#0E6B47;transition:opacity .4s ease,visibility .4s}
+#splash.out{opacity:0;visibility:hidden;pointer-events:none}
+.sp-in{display:grid;justify-items:center;gap:14px;animation:sp-in .5s ease both}
+.sp-mark{width:92px;height:auto}
+.sp-word{font:800 34px/1 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;letter-spacing:-.02em}
+.sp-word i{font-style:normal;color:#0E6B47}
+.sp-dots{display:flex;gap:8px;margin-top:22px}
+.sp-dots i{width:9px;height:9px;border-radius:50%;background:#16241D;opacity:.28;animation:sp-dot 1s infinite ease-in-out}
+.sp-dots i:nth-child(2){animation-delay:.15s}.sp-dots i:nth-child(3){animation-delay:.3s}
+@keyframes sp-dot{0%,80%,100%{opacity:.28;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+@keyframes sp-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.sp-in,.sp-dots i{animation:none}.sp-dots i{opacity:.6}}
+</style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -25,6 +40,13 @@
   </g>
   <symbol id="mark" viewBox="5 5 58 54"><use href="#mg"/></symbol>
 </defs></svg>
+<div id="splash" role="status" aria-label="Loading BodaLink">
+  <div class="sp-in">
+    <svg class="sp-mark" viewBox="5 5 58 54" aria-hidden="true"><use href="#mark"/></svg>
+    <div class="sp-word">Boda<i>Link</i></div>
+    <div class="sp-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  </div>
+</div>
 
 <div class="app" id="app">
   <header class="topbar" id="topbar">

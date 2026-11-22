@@ -67,7 +67,7 @@
     const box = BL.$("#rActive", sec);
     if (!job) return BL.html(box, "");
     const p = job.kind === "parcel", picked = job.status === "picked";
-    const who = contact ? BL.h`<div class="row"><div class="avatar">${BL.initials(contact.name)}</div><div class="grow"><div class="t">${contact.name}${contact.verified ? " ✓" : ""}</div><div class="s">${p ? "Sender" : "Passenger"} +${contact.phone}</div></div>
+    const who = contact ? BL.h`<div class="row">${BL.avatar(contact.name, contact.photo, "lg")}<div class="grow"><div class="t">${contact.name}${contact.verified ? " ✓" : ""}</div><div class="s">${p ? "Sender" : "Passenger"} +${contact.phone}</div></div>
         <a class="btn btn--soft btn--sm" href="${BL.tel(contact.phone)}">Call</a><a class="btn btn--soft btn--sm" target="_blank" rel="noopener" href="${BL.waLink(contact.phone, "Hi, this is your BodaLink rider " + BL.api.me.name.split(" ")[0] + ", plate " + rider.plate + ". I am on my way.")}">WhatsApp</a></div>` : "";
     const recip = p && contact && contact.recipient_phone ? BL.h`<div class="row"><div class="avatar" style="background:var(--forest);color:#fff">${BL.initials(contact.recipient_name)}</div><div class="grow"><div class="t">${contact.recipient_name}</div><div class="s">Recipient +${contact.recipient_phone}</div></div>
         <a class="btn btn--soft btn--sm" href="${BL.tel(contact.recipient_phone)}">Call</a></div>` : "";
@@ -222,14 +222,14 @@
       const me = BL.api.me, ok = me.status === "approved";
       BL.$("#jPrice", s).textContent = BL.money(BL.cfg.pass_price);
       BL.$("#hSw", s).setAttribute("aria-checked", !!rider.helmet);
-      const steps = [["Account created", true], ["Email confirmed", me.email_confirmed], ["National ID number given", !!me.national_id],
-        ["ID photo uploaded", !!rider.id_photo], ["Selfie with ID uploaded", !!rider.selfie], ["Bike and plate photo uploaded", !!rider.bike_photo], ["BodaLink review", ok]];
+      const steps = [["Account created", true], ["Email confirmed", me.email_confirmed], ["Profile photo added", !!me.photo], ["National ID number given", !!me.national_id],
+        ["ID photo uploaded", !!rider.id_photo], ["Bike and plate photo uploaded", !!rider.bike_photo], ["BodaLink review", ok]];
       const firstOpen = steps.findIndex((x) => !x[1]);
       BL.html(BL.$("#jSteps", s), BL.h`${steps.map(([t, d], i) => BL.h`<li class="${d ? "done" : i === firstOpen ? "now" : ""}">${t}</li>`)}`);
       const st = { approved: ["You are verified", "Open Jobs and go online. Your first 24 hours are free.", "ok"], pending: ["In review", "Finish the checklist. We review within a day and send you an alert.", "warn"],
         rejected: ["Needs attention", me.reject_reason || "Fix the items below and we will look again.", "err"], suspended: ["Suspended", "Contact BodaLink.", "err"] }[me.status];
       BL.html(BL.$("#jStatus", s), BL.h`<span class="badge badge--${st[2]}">${st[0]}</span><p style="margin-top:8px">${st[1]}</p>${ok ? BL.h`<a class="btn btn--green" style="margin-top:12px" href="#/rider">Go to jobs</a>` : ""}`);
-      const urls = {}; for (const k of ["id_photo", "selfie", "bike_photo"]) urls[k] = rider[k] ? await BL.api.docUrl(rider[k]) : "";
+      const urls = {}; for (const k of ["id_photo", "bike_photo"]) urls[k] = rider[k] ? await BL.api.docUrl(rider[k]) : "";
       BL.$$(".file", s).forEach((box) => {
         const f = box.dataset.f, img = BL.$("img", box); if (img) img.remove();
         box.classList.toggle("done", !!rider[f]);

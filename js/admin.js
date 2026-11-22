@@ -39,7 +39,7 @@
     const box = BL.$("#aListR", sec); if (!box) return;
     const list = (sec._riders || []).filter((r) => matches(search.riders, [r.member.name, r.plate, r.member.email], r.member.phone));
     BL.html(box, list.length ? BL.h`${list.map((r) => { const m = r.member; return BL.h`<button class="item" data-rider="${r.id}" style="width:100%;text-align:left">
-        <div class="avatar">${BL.initials(m.name)}</div><div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--forest)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}</div></div>
+        ${BL.avatar(m.name, m.photo)}<div class="grow"><div class="t">${m.name} ${r.online ? BL.raw('<span style="color:var(--forest)">●</span>') : ""}</div><div class="s">${r.plate}, +${m.phone}</div></div>
         <div style="text-align:right">${badge(m.status)}<div class="s">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass on" : "No pass"}</div></div></button>`; })}`
       : BL.h`<div class="empty">${search.riders ? "No rider matches that." : "Nobody here."}</div>`);
   }
@@ -56,14 +56,15 @@
 
   async function riderSheet(id) {
     const r = await BL.api.q(BL.db("riders").select("*, member:profiles!member_id(*)").eq("id", id).single()), m = r.member;
-    const urls = {}; for (const k of ["id_photo", "selfie", "bike_photo"]) urls[k] = r[k] ? await BL.api.docUrl(r[k]) : "";
-    const doc = (f, l) => (r[f] ? BL.h`<a href="${urls[f]}" target="_blank" rel="noopener"><img src="${urls[f]}" alt="${l}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px"><span class="small muted">${l}</span></a>` : BL.h`<div class="card card--flat empty small">${l} missing</div>`);
-    BL.sheet(BL.h`<div class="stack"><div class="row"><div class="avatar">${BL.initials(m.name)}</div><div class="grow"><h3>${m.name}</h3><p class="muted small">${m.email ? m.email + ", " : ""}+${m.phone}, ${m.national_id ? "ID " + m.national_id : "ID not given"}, ${r.plate}</p></div>${badge(m.status)}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${doc("id_photo", "ID")}${doc("selfie", "Selfie")}${doc("bike_photo", "Bike")}</div>
+    const urls = {}; for (const k of ["id_photo", "bike_photo"]) urls[k] = r[k] ? await BL.api.docUrl(r[k]) : ""; urls.profile = m.photo ? await BL.api.photoUrl(m.photo) : "";
+    const doc = (f, l) => ((f === "profile" ? m.photo : r[f]) ? BL.h`<a href="${urls[f]}" target="_blank" rel="noopener"><img src="${urls[f]}" alt="${l}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px"><span class="small muted">${l}</span></a>` : BL.h`<div class="card card--flat empty small">${l} missing</div>`);
+    BL.sheet(BL.h`<div class="stack"><div class="row">${BL.avatar(m.name, m.photo)}<div class="grow"><h3>${m.name}</h3><p class="muted small">${m.email ? m.email + ", " : ""}+${m.phone}, ${m.national_id ? "ID " + m.national_id : "ID not given"}, ${r.plate}</p></div>${badge(m.status)}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${doc("profile", "Profile")}${doc("id_photo", "ID")}${doc("bike_photo", "Bike")}</div>
+      ${m.photo ? "" : BL.h`<p class="small" style="color:var(--red)">No profile photo yet. You can approve this rider once they add one.</p>`}
       <p class="small muted">${r.pass_until && BL.date(r.pass_until) > new Date() ? "Pass until " + BL.clock(r.pass_until) : "No active pass"}, ${r.jobs_done} jobs, ${BL.stars(r.rating)}. Emergency contact: ${m.emergency_name || "none"} ${m.emergency_phone ? "+" + m.emergency_phone : ""}</p>
       <div class="row between"><div><b>Helmet badge</b><div class="small muted">${r.helmet ? "Rider says they give passengers a helmet" : "Rider has not said they give a helmet"}</div></div><button class="switch" id="xHel" role="switch" aria-checked="${!!r.helmet_verified}" aria-label="Helmet verified"></button></div>
       <div class="field"><label for="xReason">Reason (shown to the rider if you reject or suspend)</label><input class="input" id="xReason" value="${m.reject_reason || ""}"></div>
-      <div class="row wrap">${m.status !== "approved" ? BL.h`<button class="btn btn--green grow" data-s="approved">Approve</button>` : BL.h`<button class="btn btn--danger grow" data-s="suspended">Suspend</button>`}
+      <div class="row wrap">${m.status !== "approved" ? BL.h`<button class="btn btn--green grow" data-s="approved" ${m.photo ? "" : BL.raw("disabled")}>Approve</button>` : BL.h`<button class="btn btn--danger grow" data-s="suspended">Suspend</button>`}
         ${m.status === "pending" || m.status === "approved" ? BL.h`<button class="btn btn--soft grow" data-s="rejected">Reject</button>` : ""}</div>
       <div class="row"><input class="input grow" id="xAmt" inputmode="numeric" placeholder="Give free hours, e.g. 24"><button class="btn btn--dark" id="xAdj">Give</button></div>
       <button class="btn btn--soft btn--block" id="xPay">Record M-Pesa payment</button></div>`, (s, close) => {
@@ -93,7 +94,7 @@
   function fillPass() {
     const box = BL.$("#aListP", sec); if (!box) return;
     const list = (sec._pass || []).filter((m) => matches(search.pass, [m.name, m.email, m.national_id], m.phone));
-    BL.html(box, list.length ? BL.h`${list.map((m) => BL.h`<button class="item" data-pass="${m.id}" style="width:100%;text-align:left"><div class="avatar">${BL.initials(m.name)}</div>
+    BL.html(box, list.length ? BL.h`${list.map((m) => BL.h`<button class="item" data-pass="${m.id}" style="width:100%;text-align:left">${BL.avatar(m.name, m.photo)}
       <div class="grow"><div class="t">${m.name}</div><div class="s">+${m.phone}${m.national_id ? ", ID " + m.national_id : ""}</div></div>
       ${m.id_verified ? BL.raw('<span class="badge badge--ok">ID verified</span>') : m.national_id ? BL.raw('<span class="badge badge--warn">ID to check</span>') : ""}${m.status === "suspended" ? badge("suspended") : ""}</button>`)}`
       : BL.h`<div class="empty">${search.pass ? "No passenger matches that." : "No passengers yet."}</div>`);

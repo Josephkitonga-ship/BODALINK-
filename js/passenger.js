@@ -125,14 +125,14 @@
       return BL.h`<div class="card stack">${head}${route(r)}${item}
         <div class="row between"><div><b>${left > 0 ? "Riders are bidding" : "Picking the best bid"}</b><p class="hint">Riders set their own prices.${r.auto_accept ? " We take the first bid at or under " + BL.money(r.max_price) + "." : ""}</p></div>
           <div class="ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/><circle cx="22" cy="22" r="18" id="ringC" style="stroke-dashoffset:${113.1 * (1 - left / BL.cfg.bid_seconds)}"/></svg><span id="ringT">${left}</span></div></div>
-        ${bids.length ? bids.map((b) => BL.h`<div class="item"><div class="avatar">${BL.initials(b.rider_name)}</div>
+        ${bids.length ? bids.map((b) => BL.h`<div class="item">${BL.avatar(b.rider_name, b.rider_photo)}
           <div class="grow"><div class="t">${b.rider_name}</div><div class="s">${b.rider_plate}, ${BL.stars(b.rider_rating)}${dist(b) ? ", " + dist(b) : ""}</div></div>
           <b class="money" style="font-size:19px">${BL.money(b.amount)}</b><button class="btn btn--green btn--sm" data-act="accept" data-id="${b.id}">Accept</button></div>`)
           : BL.h`<div class="empty"><div class="pulse"></div><p style="margin-top:22px">Asking riders near you. Bids appear here.</p></div>`}
         <button class="btn btn--soft btn--block" data-act="cancel">Cancel request</button></div>`;
     }
     return BL.h`<div class="card stack">${head}${route(r)}${item}
-      <div class="row"><div class="avatar">${BL.initials(r.rider_name)}</div><div class="grow"><div class="t">${r.rider_name}</div><div class="s">${r.rider_plate}</div></div>
+      <div class="row">${BL.avatar(r.rider_name, contact && contact.photo, "lg")}<div class="grow"><div class="t">${r.rider_name}</div><div class="s">${r.rider_plate}</div></div>
         <b class="money" style="font-size:20px">${BL.money(r.fare)}</b></div>
       ${p && r.status === "assigned" ? codeCard() : ""}
       ${steps(r)}
